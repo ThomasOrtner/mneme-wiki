@@ -165,8 +165,15 @@ callouts; links mostly in the prose.
   The MVP plan is `docs/plan.md`.
 - Follow the milestone order in `docs/plan.md`; don't build deferred features
   unprompted.
+- **Milestone tutorial:** every milestone gets `docs/milestones/M<n>-<name>.md`,
+  written for the user as a tutorial, not a changelog. It covers: what was built
+  and how the pieces fit together (walk through the code paths with
+  `file:line` references), how to run and try it yourself, every decision made
+  and *why* (including alternatives rejected), what was learned or measured,
+  and the known gaps. A reader should be able to understand the milestone
+  without reading the diff first.
 - **One milestone at a time:** when a milestone's exit condition is met, tick
-  its boxes in `docs/plan.md`, make one commit (`feat: M<n> <name>` or
+  its boxes in `docs/plan.md`, write the milestone tutorial, make one commit (`feat: M<n> <name>` or
   `docs: …`), report the result, and **wait for the user's confirmation**
   before starting the next milestone.
 - When something is ambiguous or conflicts with reality, stop, ask, and propose

@@ -1,0 +1,285 @@
+<mxfile host="app.diagrams.net" agent="Claude Code" version="24.7.17">
+  <diagram id="context" name="1 System context">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="&lt;b&gt;mneme-wiki: system context&lt;/b&gt; (MVP, fully local)" style="text;html=1;fontSize=20;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="700" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="up" value="&lt;b&gt;Upstream&lt;/b&gt;&lt;br&gt;&lt;i&gt;conversion &amp;amp; processing, not mneme-wiki&lt;/i&gt;" style="swimlane;html=1;startSize=40;fillColor=#f5f5f5;strokeColor=#666666;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="90" width="280" height="330" as="geometry" />
+        </mxCell>
+        <mxCell id="mneme" value="&lt;b&gt;mneme&lt;/b&gt;&lt;br&gt;PDF / audio → Markdown&lt;br&gt;transcripts, summaries&lt;br&gt;store/{doc_id}/" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="up">
+          <mxGeometry x="30" y="60" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="exporter" value="mneme exporter (M7)&lt;br&gt;&lt;i&gt;store → source packet&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="up">
+          <mxGeometry x="30" y="170" width="220" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="other" value="other producers&lt;br&gt;&lt;i&gt;manual notes, clippers, …&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="up">
+          <mxGeometry x="30" y="250" width="220" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_m_ex" style="endArrow=block;html=1;" edge="1" parent="up" source="mneme" target="exporter">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="inbox" value="&lt;b&gt;inbox/&lt;/b&gt;&lt;br&gt;source packets&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;source.md · source.meta.json&lt;br&gt;summary.md? · toc.json?&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;rejected/ (failed edits + reason)&lt;/font&gt;" style="shape=folder;tabWidth=60;tabHeight=14;tabPosition=left;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="380" y="160" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ex_in" value="contract (TD-8)" style="endArrow=block;html=1;" edge="1" parent="1" source="exporter" target="inbox">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ot_in" style="endArrow=block;html=1;" edge="1" parent="1" source="other" target="inbox">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="core" value="&lt;b&gt;mneme-wiki&lt;/b&gt;" style="swimlane;html=1;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="640" y="90" width="340" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="cli" value="&lt;b&gt;CLI&lt;/b&gt; mneme-wiki&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;init · integrate · lint · reindex&lt;br&gt;search · query · bench · status&lt;br&gt;--json on every read&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="core">
+          <mxGeometry x="20" y="45" width="140" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="mcp" value="&lt;b&gt;MCP server&lt;/b&gt; (stdio)&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;status · search · read_page&lt;br&gt;lint · query · integrate (job)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="core">
+          <mxGeometry x="180" y="45" width="140" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="engine" value="&lt;b&gt;Engine&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;integrate (staged pipeline, page 2)&lt;br&gt;lint · index/log · search (BM25)&lt;br&gt;query + file-back · bench&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="core">
+          <mxGeometry x="20" y="165" width="300" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="vaultio" value="&lt;b&gt;vault.py&lt;/b&gt; — the only writer&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;atomic writes · path confinement · git commit per operation&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="core">
+          <mxGeometry x="20" y="275" width="300" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="llmw" value="&lt;b&gt;llm.py&lt;/b&gt; → backend protocol&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;model per stage role (TD-14)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="core">
+          <mxGeometry x="20" y="350" width="300" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_cli_eng" style="endArrow=block;html=1;" edge="1" parent="core" source="cli" target="engine">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_mcp_eng" style="endArrow=block;html=1;" edge="1" parent="core" source="mcp" target="engine">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_eng_v" style="endArrow=block;html=1;" edge="1" parent="core" source="engine" target="vaultio">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_in_core" value="read packets" style="endArrow=block;html=1;" edge="1" parent="1" source="inbox" target="engine">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ollama" value="&lt;b&gt;Ollama&lt;/b&gt; (localhost)&lt;br&gt;qwen3:14b&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;schema-constrained JSON&lt;br&gt;thinking per stage&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;size=12;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="700" y="580" width="220" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="remote" value="OpenRouter&lt;br&gt;&lt;i&gt;deferred, opt-in&lt;/i&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;size=10;dashed=1;fillColor=#f5f5f5;strokeColor=#999999;fontColor=#999999;" vertex="1" parent="1">
+          <mxGeometry x="960" y="600" width="130" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e_llm_ol" value="local only (L-1)" style="endArrow=block;html=1;" edge="1" parent="1" source="llmw" target="ollama">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_llm_rem" style="endArrow=block;html=1;dashed=1;strokeColor=#999999;" edge="1" parent="1" source="llmw" target="remote">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="vault" value="&lt;b&gt;vault/&lt;/b&gt; (git repo, one per domain)&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;WIKI.md — schema for the maintainer&lt;br&gt;index.md — catalogue · log.md — append-only&lt;br&gt;sources/ · entities/ · concepts/ · syntheses/&lt;br&gt;Markdown + YAML front matter + [[wikilinks]]&lt;br&gt;the source of truth (TD-4)&lt;/font&gt;" style="shape=folder;tabWidth=70;tabHeight=14;tabPosition=left;html=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="200" width="300" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="e_v_vault" value="writes + commits" style="endArrow=block;html=1;" edge="1" parent="1" source="vaultio" target="vault">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="human" value="&lt;b&gt;You&lt;/b&gt; in Obsidian&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;read · graph · backlinks&lt;br&gt;edit (preserved) · review git diffs&lt;/font&gt;" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="420" width="40" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="e_h_v" style="endArrow=block;html=1;startArrow=block;" edge="1" parent="1" source="human" target="vault">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="agent" value="&lt;b&gt;Agents&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;e.g. Claude Code via MCP&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="90" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ag_mcp" value="BR-12" style="endArrow=block;html=1;" edge="1" parent="1" source="agent" target="mcp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pipeline" name="2 Integration pipeline">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="t" value="&lt;b&gt;integrate &amp;lt;packet&amp;gt;: staged pipeline&lt;/b&gt; (TD-13, revised by M0)&lt;br&gt;&lt;font style=&quot;font-size:12px&quot;&gt;code orchestrates · the model makes small decisions · no call ever sees more than one page or one chunk&lt;/font&gt;" style="text;html=1;fontSize=20;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1100" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="lg1" value="code (deterministic)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="20" width="150" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="lg2" value="model call (qwen3:14b)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="55" width="150" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="pk" value="&lt;b&gt;source packet&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;cleaned Markdown + meta&lt;/font&gt;" style="shape=folder;tabWidth=40;tabHeight=12;tabPosition=left;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="40" y="130" width="150" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="ch" value="&lt;b&gt;chunk&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;by heading, ≤ 500 words&lt;br&gt;locator = heading&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="240" y="130" width="150" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="ex" value="&lt;b&gt;1 extract&lt;/b&gt; — per chunk&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;subjects: name, kind, aliases,&lt;br&gt;description, claims[]&lt;br&gt;no thinking · ~12 s/chunk&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="440" y="120" width="190" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="mg" value="&lt;b&gt;merge in source&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;union by normalised&lt;br&gt;name / alias&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="680" y="130" width="150" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="rs" value="&lt;b&gt;2 resolve&lt;/b&gt;" style="swimlane;html=1;startSize=26;rounded=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="880" y="100" width="420" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="rs1" value="exact name / alias match&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;vs existing pages + earlier&lt;br&gt;subjects of this source&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="rs">
+          <mxGeometry x="15" y="40" width="185" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="rs2" value="candidates (≤ 4)&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;name shape first: containment,&lt;br&gt;initialism (ROI ↔ Regions of Interest)&lt;br&gt;then BM25&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="rs">
+          <mxGeometry x="220" y="40" width="185" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="rs3" value="&lt;b&gt;pairwise yes/no&lt;/b&gt; per candidate, &lt;b&gt;thinking on&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;&quot;same thing, or part / subtype / tool / related?&quot;&lt;br&gt;first &quot;same&quot; wins · every decision logged with reason&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="rs">
+          <mxGeometry x="15" y="135" width="390" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="rsn" value="M0: pick-one prompts failed both ways; pairwise+think P=1.0 R=0.9 on 22 pairs" style="text;html=1;fontSize=10;fontStyle=2;" vertex="1" parent="rs">
+          <mxGeometry x="15" y="215" width="400" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rs12" value="no hit" style="endArrow=block;html=1;" edge="1" parent="rs" source="rs1" target="rs2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rs23" style="endArrow=block;html=1;" edge="1" parent="rs" source="rs2" target="rs3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pl" value="&lt;b&gt;3 plan&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;claims grouped by target page&lt;br&gt;new page paths (entities/ · concepts/)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="420" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="pa" value="&lt;b&gt;4 patch&lt;/b&gt; — one call per page&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;page + its new claims + linkable pages&lt;br&gt;→ lead + ops[{section, append|replace, text}]&lt;br&gt;thinking: better structure, ~5× slower (bench in M4)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="760" y="410" width="270" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="va" value="&lt;b&gt;5 validate &amp;amp; apply&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;links → only known pages&lt;br&gt;every fact line cited ([[sources/…]])&lt;br&gt;replace may not drop links or shrink&lt;br&gt;lead may not lose links · fix escaped \n&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="480" y="405" width="230" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="rej" value="inbox/rejected/&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;edit + reason&lt;/font&gt;" style="shape=folder;tabWidth=40;tabHeight=12;tabPosition=left;html=1;whiteSpace=wrap;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="520" y="580" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sp" value="&lt;b&gt;source page&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;summary + key points (1 call,&lt;br&gt;or upstream summary.md)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="40" y="280" width="170" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="al" value="&lt;b&gt;6 autolink&lt;/b&gt; (added in M0)&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;first plain mention of another page's&lt;br&gt;title/alias → [[link]] · longest first&lt;br&gt;short names case-sensitive&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="200" y="410" width="230" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="fi" value="&lt;b&gt;7 finish&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;source page lists touched pages&lt;br&gt;index.md · log.md entry&lt;br&gt;git commit &quot;ingest: …&quot;&lt;br&gt;run report&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="200" y="560" width="230" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="vlt" value="&lt;b&gt;vault/&lt;/b&gt;" style="shape=folder;tabWidth=40;tabHeight=12;tabPosition=left;html=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="700" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p1" style="endArrow=block;html=1;" edge="1" parent="1" source="pk" target="ch"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2" value="chunks" style="endArrow=block;html=1;" edge="1" parent="1" source="ch" target="ex"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p3" value="subjects JSON" style="endArrow=block;html=1;" edge="1" parent="1" source="ex" target="mg"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p4" style="endArrow=block;html=1;" edge="1" parent="1" source="mg" target="rs"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p5" value="existing page | earlier subject | new" style="endArrow=block;html=1;" edge="1" parent="1" source="rs" target="pl"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p6" value="per page" style="endArrow=block;html=1;" edge="1" parent="1" source="pl" target="pa"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p7" value="ops JSON" style="endArrow=block;html=1;" edge="1" parent="1" source="pa" target="va"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p8" value="invalid" style="endArrow=block;html=1;strokeColor=#b85450;" edge="1" parent="1" source="va" target="rej"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p9" value="pages written" style="endArrow=block;html=1;" edge="1" parent="1" source="va" target="al"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p10" style="endArrow=block;html=1;" edge="1" parent="1" source="al" target="fi"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p11" style="endArrow=block;html=1;" edge="1" parent="1" source="pk" target="sp"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p12" style="endArrow=block;html=1;" edge="1" parent="1" source="sp" target="fi"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p13" value="one commit" style="endArrow=block;html=1;" edge="1" parent="1" source="fi" target="vlt"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="note" value="&lt;b&gt;Per source (M0, 3 sources ≈ 7k words):&lt;/b&gt; ~17 extract calls, ~165 resolve calls, ~120 patch calls (16 min, patch thinking off).&lt;br&gt;100% valid JSON in every stage with Ollama &lt;i&gt;format=schema&lt;/i&gt;. The model never writes files; code owns paths, links, citations, front matter." style="text;html=1;fontSize=12;align=left;verticalAlign=top;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="700" y="580" width="600" height="70" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="modules" name="3 Module map (planned)">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="t" value="&lt;b&gt;mneme_wiki/ module map&lt;/b&gt; (planned, docs/plan.md) — arrows = &quot;uses&quot;" style="text;html=1;fontSize=20;align=left;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="900" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="L1" value="entry points" style="swimlane;html=1;horizontal=0;startSize=30;fillColor=#f5f5f5;strokeColor=#999999;" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="1300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="cli" value="cli.py&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;thin · rich / --json&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="L1">
+          <mxGeometry x="300" y="25" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="mcp" value="mcp_server.py&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;stdio · logs to stderr · jobs&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="L1">
+          <mxGeometry x="700" y="25" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="L2" value="operations" style="swimlane;html=1;horizontal=0;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="40" y="220" width="1300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="integ" value="integrate.py&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;stage orchestration · report&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="L2">
+          <mxGeometry x="60" y="25" width="170" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="lint" value="lint.py" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="L2">
+          <mxGeometry x="300" y="25" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="query" value="query.py&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;answer + file-back&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="L2">
+          <mxGeometry x="480" y="25" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="bench" value="bench.py" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="L2">
+          <mxGeometry x="680" y="25" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="idx" value="index_log.py" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="L2">
+          <mxGeometry x="860" y="25" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="search" value="search.py&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;BM25&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="L2">
+          <mxGeometry x="1050" y="25" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="L3" value="stages" style="swimlane;html=1;horizontal=0;startSize=30;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="40" y="360" width="1300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="sx" value="stages/extract.py" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="L3">
+          <mxGeometry x="60" y="25" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sr" value="stages/resolve.py" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="L3">
+          <mxGeometry x="250" y="25" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sp" value="stages/plan.py" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="L3">
+          <mxGeometry x="440" y="25" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="spa" value="stages/patch.py" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="L3">
+          <mxGeometry x="630" y="25" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ed" value="edits.py&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;validate · apply · reject&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="L3">
+          <mxGeometry x="820" y="25" width="170" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="L4" value="vault model" style="swimlane;html=1;horizontal=0;startSize=30;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="500" width="1300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="vault" value="vault.py&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;only writer · atomic · git&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="L4">
+          <mxGeometry x="200" y="25" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="fm" value="frontmatter.py&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;PyYAML · schema · keeps unknown keys&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="L4">
+          <mxGeometry x="460" y="25" width="220" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="links" value="links.py&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;[[wikilinks]] · aliases · backlinks&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="L4">
+          <mxGeometry x="760" y="25" width="220" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="L5" value="infrastructure" style="swimlane;html=1;horizontal=0;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="640" width="1300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="llm" value="llm.py&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;chat_json · for_role(role)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="L5">
+          <mxGeometry x="200" y="25" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="be" value="backends.py&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;protocol + Ollama&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="L5">
+          <mxGeometry x="460" y="25" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="cfg" value="config.py&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;all env vars · used by everyone&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="L5">
+          <mxGeometry x="900" y="25" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="a1" style="endArrow=block;html=1;" edge="1" parent="1" source="cli" target="integ"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a2" style="endArrow=block;html=1;" edge="1" parent="1" source="mcp" target="integ"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a3" style="endArrow=block;html=1;" edge="1" parent="1" source="integ" target="sx"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a4" style="endArrow=block;html=1;" edge="1" parent="1" source="integ" target="ed"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a5" style="endArrow=block;html=1;" edge="1" parent="1" source="sr" target="search"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a6" style="endArrow=block;html=1;" edge="1" parent="1" source="ed" target="vault"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a7" style="endArrow=block;html=1;" edge="1" parent="1" source="vault" target="fm"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a8" style="endArrow=block;html=1;" edge="1" parent="1" source="spa" target="llm"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a9" style="endArrow=block;html=1;" edge="1" parent="1" source="llm" target="be"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a10" style="endArrow=block;html=1;" edge="1" parent="1" source="lint" target="links"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a11" style="endArrow=block;html=1;" edge="1" parent="1" source="query" target="search"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a12" style="endArrow=block;html=1;" edge="1" parent="1" source="bench" target="integ"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="note" value="Rule: only vault.py writes files. Stages never import each other; integrate.py passes plain JSON-able data between them, so each stage can run alone (--stage) and be benchmarked." style="text;html=1;fontSize=12;fontStyle=2;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="40" y="770" width="1000" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

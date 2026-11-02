@@ -3,8 +3,10 @@
 The implementation plan for the MVP. [AGENTS.md](../AGENTS.md) holds the
 stable rules (requirements, constraints, decisions, coding standards). This
 file holds the build order, the detailed designs, and progress. Tick off the
-checkboxes as work lands, in the same commit. Each milestone ends with one
-commit, and then work stops until the user confirms the next milestone.
+checkboxes as work lands, in the same commit. Each milestone ends with a
+tutorial in `docs/milestones/M<n>-<name>.md` (what was built, how to run it,
+the decisions and why), one commit, and then work stops until the user
+confirms the next milestone.
 
 ## Goal
 
@@ -36,22 +38,26 @@ working, tested state.
 Check that the staged pipeline works on qwen3:14b before any architecture is
 built on it.
 
-- [ ] Pick 3 related real sources from `../mneme/store/` (non-sensitive,
+- [x] Pick 3 related real sources from `../mneme/store/` (non-sensitive,
       overlapping entities/concepts). Copy them as source packets to
       `bench/corpus/`.
-- [ ] Throwaway scripts in `spike/` (not production code, no tests) run
+- [x] Throwaway scripts in `spike/` (not production code, no tests) run
       extract → resolve → patch by hand on qwen3:14b.
-- [ ] Optional: run the same prompts once on a larger local model, if the
-      hardware allows (e.g. `qwen3:30b-a3b` or `qwen3:32b`), as a reference.
-      This tells "model too weak" apart from "stage/prompt badly designed".
-- [ ] Hand-label a small gold file (`bench/corpus/gold.json`): expected
+- [ ] ~~Optional: run the same prompts once on a larger local model~~ —
+      skipped: not pulled locally; the resolve micro-benchmark answered
+      "model too weak vs prompt badly designed" instead (it was the prompt).
+      Moved to M4.
+- [x] Hand-label a small gold file (`bench/corpus/gold.json`): expected
       entities/concepts and which mentions are the same entity.
-- [ ] Write `spike/FINDINGS.md`: JSON validity, entity-merge quality, whether
-      patches keep existing content, latency per call, and recommended
-      changes to the stage design below.
+- [x] Write `docs/milestones/M0-feasibility.md` (tutorial + findings): JSON
+      validity, entity-merge quality, whether patches keep existing content,
+      latency per call, and recommended changes to the stage design below.
 
 **Exit:** the stage design is confirmed or revised (update this file).
 Go/no-go for qwen3:14b as the default.
+
+**Result (2026-11-02):** go, with resolve redesigned (pairwise + thinking) and a
+code autolink stage added. See [M0 tutorial](milestones/M0-feasibility.md).
 
 ### M1: Scaffold & vault model
 
@@ -99,6 +105,9 @@ input/output that can be inspected:
       prints the plan and diff.
 - [ ] Tests with a fake LLM (recorded responses from M0); opt-in real
       run via `pytest -m ollama`.
+- [ ] Resolve regression test: the M0 pairs (`spike/resolve_bench.py`), extended,
+      as a `pytest -m ollama` test with precision/recall thresholds.
+- [ ] `autolink` stage (code) after apply.
 
 **Exit:** the 3 corpus sources integrate cleanly on qwen3:14b, and lint is clean.
 
@@ -110,6 +119,10 @@ input/output that can be inspected:
 - [ ] Baseline run (all qwen3:14b) plus 2–3 other local models (e.g.
       `qwen3:8b`, `qwen3:30b-a3b`, `gemma3:12b`, whatever fits the hardware);
       write a short comparison to `bench/README.md`.
+- [ ] Patch stage: thinking on vs off, judged on page *quality* (structure,
+      duplicate bullets), not only speed (M0: 5× slower, visibly better structure).
+- [ ] Repeat each configuration ≥ 3× — M0 showed ±15 % run-to-run variance in
+      extraction.
 
 **Exit:** the model choice per stage is backed by data.
 
@@ -130,6 +143,9 @@ input/output that can be inspected:
 
 - [ ] `mneme-export-wiki-packet <doc_id> --inbox <path>`: `store/{doc_id}` →
       source packet (`source.md`, `source.meta.json`, `summary.md`, `toc.json`).
+- [ ] Clean on export (prototype: `spike/make_packets.py`): blank table cells that
+      repeat the cell above, drop `<!-- image -->`, unescape HTML entities and `\_`
+      (M0: cut one document to a third of its size).
 
 ---
 
@@ -151,17 +167,41 @@ inbox/<packet-name>/
 
 | Stage | Who | Input → output | Mode |
 |---|---|---|---|
-| Extract | LLM, per chunk | source chunk → `[{kind: entity\|concept\|claim, name, text, locator}]` | non-thinking, schema-constrained JSON |
-| Resolve | code first, LLM for ambiguous cases | candidate → existing page or new. Code matches slugs, `aliases` and BM25; the LLM only answers yes/no or pick-one among the top-k | non-thinking |
-| Plan | code only | claims grouped by target page, new pages listed, link edges computed | — |
-| Patch | LLM, one call per page | page + its new claims → `[{section, op: append\|insert\|replace, text, citations}]`. New pages use a fixed template | thinking |
-| Validate & apply | code only | no existing claim or link lost, link targets exist, citations present, front matter valid. Retry once, then reject with the reason | — |
-| Finish | code only | backlinks, `index.md`, `log.md`, git commit | — |
+Revised by M0 (see [M0 tutorial](milestones/M0-feasibility.md)):
 
-Token budget per LLM call: about 8–12k input tokens on qwen3:14b. A page that
-doesn't fit gets patched section by section.
+| Stage | Who | Input → output | Mode |
+|---|---|---|---|
+| Chunk | code | packet → chunks ≤ 500 words, split at headings; heading = locator | — |
+| Extract | LLM, per chunk | chunk + known page titles → `subjects[{name, kind, entity_kind, aliases, description, claims[]}]`, ≤ 15 per chunk | no thinking, schema-constrained JSON |
+| Merge in source | code | union subjects by normalised name/alias | — |
+| Resolve | code + LLM | exact match vs existing pages *and* earlier subjects of this source; else ≤ 4 candidates (name shape: containment/initialism, then BM25); **pairwise yes/no per candidate**, first "same" wins; every decision logged with reason | **thinking** |
+| Plan | code | claims grouped by target page, new page paths | — |
+| Patch | LLM, one call per page | page + its new claims + linkable pages → `{lead, ops[{section, op: append\|replace, text}]}` | thinking on/off decided in M4 |
+| Validate & apply | code | links only to known pages, every fact line cited (added + counted if missing), `replace` may not drop links or shrink < 60 %, lead may not lose links, escaped `\n` repaired. Retry once, then reject with the reason | — |
+| Autolink | code | first plain mention of another page's title/alias → `[[link]]`, longest first, short names case-sensitive | — |
+| Finish | code | source page lists touched pages, `index.md`, `log.md`, git commit, run report | — |
+
+Token budget per LLM call: about 8–12k input tokens on qwen3:14b (M0 maximum
+was ~6k). A page that doesn't fit gets patched section by section.
 
 Contradiction detection is not part of the MVP stages (deferred LLM lint).
+
+### Progress & run reports
+
+Integration takes minutes per source, so a silent command is unusable.
+
+- **While running:** one line per stage and per model call, with elapsed
+  time, stage and position (`patch 12/40 ~ concepts/activity-plan`), ok / retry /
+  fail, latency and tokens; rejected edits are printed as they happen.
+  `rich` progress bars when attached to a terminal, plain lines when piped.
+  Progress goes through the `log` callable, so the MCP server sends it to stderr
+  and job status.
+- **When done:** a run report printed and saved next to the run (and summarised
+  in the `log.md` entry): per-source table (chunks, subjects, matched vs new,
+  pages created/updated, rejected edits, time), per-stage call stats,
+  validation counters, the most-connected pages, and what to look at next
+  (vault path, `git log`, rejection file). `--json` returns the same data.
+- The spike (`spike/spike.py`) prototypes this format (`report.md`).
 
 ### Backend protocol
 
