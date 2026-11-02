@@ -1,0 +1,2 @@
+# Fixture vaults are byte-exact test data (CRLF, BOM, ...): never convert them.
+tests/fixtures/** -text

@@ -23,7 +23,7 @@ mneme-wiki weaves them into the vault and keeps it healthy.
 | Schema (`vault/WIKI.md`) | human + LLM | changed deliberately, logged |
 
 There are two agent audiences: this file is for agents that write **code**.
-`templates/WIKI.md` (copied into each vault) is for the agent that maintains
+`mneme_wiki/templates/WIKI.md` (copied into each vault) is for the agent that maintains
 **wiki content**.
 
 ## 2. Business requirements
@@ -88,6 +88,10 @@ There are two agent audiences: this file is for agents that write **code**.
 | TD-15 | Benchmark harness (`mneme-wiki bench`) on a fixed corpus decides model choices; local models only for now | Measure, don't assume |
 | TD-16 | Many vaults, each self-contained with its own `WIKI.md`. The dev vault lives in `examples/vault/`; user vaults live anywhere, set via `WIKI_VAULT_DIR` | Separate domains stay separate |
 | TD-17 | `source` pages keep the source's language; all other pages are written in `WIKI_LANGUAGE` (default `en`) | Mixed-language sources (e.g. German talks) |
+| TD-18 | **Resolve = pairwise yes/no with thinking:** exact name/alias match first (against existing pages *and* earlier subjects of the same source), then ≤ 4 candidates (name shape, then BM25), one yes/no call per candidate, every decision logged with its reason | M0: picking one of many candidates either never merged or merged anything related; pairwise + thinking had no false merges |
+| TD-19 | **Linking is code (autolink),** the model only adds links it is sure of | M0: code gave ~2 links/page, the model without thinking 0.16 |
+| TD-20 | **Front matter round trip:** the original front-matter block is kept verbatim and only re-serialised (PyYAML; existing key order kept, new keys in schema order, newline style and BOM kept) when `meta` actually changed. Comments in a *changed* block are lost | Unchanged files stay byte-identical, so diffs show only real edits; no own YAML emitter or `ruamel.yaml` needed |
+| TD-21 | The inbox defaults to `<vault>/../inbox`; `WIKI_INBOX_DIR` overrides it | Many vaults (TD-16): each gets its own inbox, independent of the working directory |
 
 Record new decisions as new `TD-n` rows; don't silently rewrite old ones.
 

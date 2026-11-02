@@ -22,3 +22,10 @@ spike/out/
 
 # draw.io editor temp files
 *.dtmp
+
+# Rendered copies of the docs (generated from the .md files)
+*.pdf
+
+# Dev vault (its own git repo, TD-16) and its inbox
+examples/vault/
+examples/inbox/

@@ -61,20 +61,25 @@ code autolink stage added. See [M0 tutorial](milestones/M0-feasibility.md).
 
 ### M1: Scaffold & vault model
 
-- [ ] `pyproject.toml` (deps: `pyyaml`, `ollama`, `python-dotenv`,
+- [x] `pyproject.toml` (deps: `pyyaml`, `ollama`, `python-dotenv`,
       `rich`, `rank_bm25`, `mcp`; dev: `pytest`, `ruff`), `mneme_wiki/`
       package, `config.py`, `.env.example`, `.gitignore`.
-- [ ] `templates/WIKI.md`: vault schema and maintainer instructions.
-- [ ] `frontmatter.py`: parse/serialise/validate, keeps unknown keys.
-- [ ] `links.py`: extract/resolve `[[page]]`, `[[page|alias]]`,
+- [x] `mneme_wiki/templates/WIKI.md`: vault schema and maintainer instructions
+      (inside the package so it ships with a non-editable install).
+- [x] `frontmatter.py`: parse/serialise/validate, keeps unknown keys (TD-20).
+- [x] `links.py`: extract/resolve `[[page]]`, `[[page|alias]]`,
       `[[page#heading]]`, alias map, backlink map.
-- [ ] `vault.py`: page I/O (atomic writes), slugging that is safe on
+- [x] `vault.py`: page I/O (atomic writes), slugging that is safe on
       Windows/NTFS, case-collision detection, path confinement, git commit.
-- [ ] `mneme-wiki init <path>`.
-- [ ] Fixture vaults in `tests/fixtures/` (clean, broken YAML, broken links,
+- [x] `mneme-wiki init <path>`.
+- [x] Fixture vaults in `tests/fixtures/` (clean, broken YAML, broken links,
       Windows-hostile names).
 
 **Exit:** round-trip tests pass (parse → serialise leaves files unchanged byte for byte when nothing changed).
+
+**Result (2026-11-02):** done. Every parsable fixture file (LF, CRLF + BOM,
+comments, quoting, no front matter) round-trips byte for byte; 152 tests pass.
+See [M1 tutorial](milestones/M1-scaffold.md).
 
 ### M2: Lint, index, log
 
@@ -165,8 +170,6 @@ inbox/<packet-name>/
 
 ### Integration stages
 
-| Stage | Who | Input → output | Mode |
-|---|---|---|---|
 Revised by M0 (see [M0 tutorial](milestones/M0-feasibility.md)):
 
 | Stage | Who | Input → output | Mode |
@@ -272,7 +275,7 @@ mneme-wiki status [--json]
 | Var | Default |
 |---|---|
 | `WIKI_VAULT_DIR` | `examples/vault` |
-| `WIKI_INBOX_DIR` | `inbox` |
+| `WIKI_INBOX_DIR` | `<vault>/../inbox` (TD-21) |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` |
 | `NUM_CTX` | `32768` |
 | `MODEL_EXTRACT`, `MODEL_RESOLVE`, `MODEL_PATCH`, `MODEL_SUMMARY`, `MODEL_QUERY` | `ollama:qwen3:14b` |
