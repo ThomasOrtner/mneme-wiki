@@ -17,7 +17,9 @@ from rich.markup import escape
 
 from . import __version__, config
 from .index_log import append_log, reindex
+from .integrate import STAGES, integrate
 from .lint import lint
+from .packet import PacketError
 from .search import search
 from .vault import Vault, VaultError, init_vault
 
@@ -117,6 +119,77 @@ def cmd_search(args: argparse.Namespace) -> int:
     return 0
 
 
+def _packet_dir(arg: str, vault: Vault) -> Path:
+    """A packet folder given as a path, or as a name inside the vault's inbox."""
+    path = Path(arg)
+    if path.is_dir():
+        return path
+    in_inbox = config.inbox_dir(vault.root) / arg
+    if in_inbox.is_dir():
+        return in_inbox
+    raise PacketError(
+        f"no packet folder {arg!r} (not a path, not in {config.inbox_dir(vault.root)})"
+    )
+
+
+def cmd_integrate(args: argparse.Namespace) -> int:
+    if args.stage and (len(args.packets) != 1 or not args.out):
+        return _fail(args, ValueError("--stage needs exactly one packet and --out FILE"))
+    # Progress goes to stderr when stdout carries JSON.
+    out = err_console if args.json else console
+
+    def log(msg: str) -> None:
+        out.print(escape(msg))
+
+    reports = []
+    try:
+        vault = _vault(args)
+        inbox = config.inbox_dir(vault.root)
+        for arg in args.packets:
+            report = integrate(
+                vault, _packet_dir(arg, vault), inbox=inbox, dry_run=args.dry_run,
+                stop_after=args.stage, log=log,
+            )  # fmt: skip
+            reports.append(report)
+            if args.stage:
+                data = json.dumps(report.stage_output, ensure_ascii=False, indent=1)
+                Path(args.out).write_bytes((data + "\n").encode("utf-8"))
+                log(f"stage {args.stage} output written to {args.out}")
+            elif args.dry_run and not args.json:
+                console.print(escape(report.diff) if report.diff else "(no changes)")
+            if not report.ok:
+                break
+    except (VaultError, PacketError, ValueError) as exc:
+        if reports and args.json:
+            _emit_json({"ok": False, "error": str(exc), "runs": [_run_json(r) for r in reports]})
+            return 2
+        return _fail(args, exc)
+    ok = all(r.ok for r in reports)
+    if args.json:
+        _emit_json({"ok": ok, "runs": [_run_json(r, args.dry_run) for r in reports]})
+    else:
+        for r in reports:
+            if r.stopped_after:
+                console.print(f"stopped after stage {r.stopped_after}; nothing was written")
+                continue
+            state = "[green]ok[/green]" if r.ok else "[red]failed[/red]"
+            verb = "would be" if r.dry_run else "were"
+            console.print(
+                f"{state} {escape(r.title)}: {len(r.created)} pages {verb} created, "
+                f"{len(r.updated)} updated, {len(r.rejected)} edits rejected; "
+                f"report {r.run_dir}/report.md"
+            )
+    return 0 if ok else 1
+
+
+def _run_json(report, with_diff: bool = False) -> dict:
+    data = report.to_dict()
+    data.pop("stage_output", None)
+    if not with_diff:
+        data.pop("diff", None)
+    return data
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="mneme-wiki", description="Local, LLM-maintained wiki of interlinked Markdown notes."
@@ -143,6 +216,15 @@ def build_parser() -> argparse.ArgumentParser:
         p.set_defaults(func=func)
         return p
 
+    p = vault_cmd(
+        "integrate", "integrate source packets into the vault (one commit each)", cmd_integrate
+    )
+    p.add_argument("packets", nargs="+", help="packet folder, or a packet name in the inbox")
+    p.add_argument(
+        "--dry-run", action="store_true", help="run every stage, print the diff, write nothing"
+    )
+    p.add_argument("--stage", choices=STAGES, help="stop after this stage (nothing is written)")
+    p.add_argument("--out", help="with --stage: write the stage's output to this JSON file")
     vault_cmd("lint", "check links, front matter, citations; exit 1 on errors", cmd_lint)
     vault_cmd("reindex", "regenerate index.md from the pages", cmd_reindex)
     p = vault_cmd("search", "BM25 search over pages", cmd_search)
@@ -157,7 +239,17 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _utf8_pipes() -> None:
+    """Piped output on Windows defaults to the ANSI code page (cp1252), which can't
+    encode page titles in other scripts, or the progress glyphs. A terminal is
+    fine (Python uses the console API there), so only pipes are switched."""
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure") and not stream.isatty():
+            stream.reconfigure(encoding="utf-8")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
+    _utf8_pipes()
     args = build_parser().parse_args(argv)
     return args.func(args)
 

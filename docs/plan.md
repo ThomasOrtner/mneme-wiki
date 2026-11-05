@@ -124,22 +124,29 @@ Built stage by stage. Each stage can be run on its own and has a JSON
 input/output that can be inspected:
 `mneme-wiki integrate <packet> --stage <name> --out x.json`.
 
-- [ ] Packet loader + source page writer (uses upstream `summary.md` if
+- [x] Packet loader + source page writer (uses upstream `summary.md` if
       present, otherwise one summary call).
-- [ ] 3a `stages/extract.py`
-- [ ] 3b `stages/resolve.py`
-- [ ] 3c `stages/plan.py` (code only)
-- [ ] 3d `stages/patch.py`
-- [ ] 3e `edits.py`: validate and apply, reject to `inbox/rejected/`
-- [ ] Orchestration in `integrate.py`: reindex, log, commit; `--dry-run`
+- [x] 3a `stages/extract.py`
+- [x] 3b `stages/resolve.py`
+- [x] 3c `stages/plan.py` (code only)
+- [x] 3d `stages/patch.py`
+- [x] 3e `edits.py`: validate and apply, reject to `inbox/rejected/`
+- [x] Orchestration in `integrate.py`: reindex, log, commit; `--dry-run`
       prints the plan and diff.
-- [ ] Tests with a fake LLM (recorded responses from M0); opt-in real
+- [x] Tests with a fake LLM (recorded responses from M0); opt-in real
       run via `pytest -m ollama`.
-- [ ] Resolve regression test: the M0 pairs (`spike/resolve_bench.py`), extended,
+- [x] Resolve regression test: the M0 pairs (`spike/resolve_bench.py`), extended,
       as a `pytest -m ollama` test with precision/recall thresholds.
-- [ ] `autolink` stage (code) after apply.
+- [x] `autolink` stage (code) after apply.
 
 **Exit:** the 3 corpus sources integrate cleanly on qwen3:14b, and lint is clean.
+
+**Result (2026-11-05):** done. 3 sources → 3 commits in 16 min, 119 pages,
+lint 0 errors / 0 warnings, 0 rejected edits in 291 calls. Gold: 31/33 pages,
+9/14 core merged across sources, 0 wrong merges (= M0's best run), 1.9 links per
+page. Resolve regression: P 1.00, R 0.79. The fake-LLM tests use a scripted toy
+model instead of recorded M0 responses (M0 stored none). 251 tests. See
+[M3 tutorial](milestones/M3-integrate.md).
 
 ### M4: Bench (local models)
 
@@ -276,6 +283,10 @@ complete(messages, *, schema=None, thinking=False) -> Result
 | `search.py` | BM25 page search |
 | `lint.py` | Deterministic checks |
 | `stages/extract.py`, `stages/resolve.py`, `stages/plan.py`, `stages/patch.py` | Integration stages |
+| `stages/source.py`, `stages/autolink.py`, `stages/common.py` | Source page, code linking, shared stage types and name keys |
+| `prompts/*.md` | System prompts, one file per stage |
+| `packet.py` | Source packet loading, chunking |
+| `workspace.py` | In-memory overlay of the vault: collect writes, diff, flush (dry runs) |
 | `edits.py` | Edit data model, validation, apply |
 | `integrate.py` | Stage orchestration for one packet |
 | `query.py` | Answer + file-back |
@@ -306,6 +317,7 @@ mneme-wiki status [--json]
 | `NUM_CTX` | `32768` |
 | `MODEL_EXTRACT`, `MODEL_RESOLVE`, `MODEL_PATCH`, `MODEL_SUMMARY`, `MODEL_QUERY` | `ollama:qwen3:14b` |
 | `MODEL_JUDGE` | unset |
+| `THINK_<ROLE>` (`THINK_RESOLVE`, `THINK_PATCH`, …) | `1` for resolve, `0` otherwise |
 | `WIKI_LANGUAGE` | `en` |
 
 ---

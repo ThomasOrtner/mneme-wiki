@@ -243,6 +243,10 @@ class Vault:
             raise VaultError(f"git {' '.join(args)} failed: {proc.stderr.strip()}")
         return proc
 
+    def is_clean(self) -> bool:
+        """True if git sees no uncommitted change (ignored files don't count)."""
+        return self.git("status", "--porcelain").stdout.strip() == ""
+
     def commit(self, message: str) -> str | None:
         """Stage everything in the vault and commit. Returns the sha, or None if clean."""
         if not self.is_repo():

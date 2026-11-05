@@ -1,0 +1,38 @@
+{
+  "_note": "Resolve regression pairs (M3). The first 22 are the M0 micro-benchmark (spike/resolve_bench.py, real cases from the spike runs); the rest extend it with the gold file's must_not_merge pairs and more abbreviation/spelling matches. Fields: a, a_desc, b, b_aliases, b_desc, same.",
+  "pairs": [
+    ["Strategic Planning", "Planning process that prepares future rover activities before tactical planning.", "Strategic Planning Cycle", [], "Operational planning process that progressively prepares future Rover activities.", true],
+    ["RFM-EXM", "The ExoMars Rosalind Franklin rover mission.", "ExoMars Rosalind Franklin Mission", ["RFM"], "ESA rover mission to Mars.", true],
+    ["Trajectory", "Rover path, planned or executed, stored on the DAR.", "Traverse", ["notional traverse"], "Route of the rover across the terrain, planned or executed.", true],
+    ["RSOWG", "Rover science operations working group whose members plan science.", "SOWG", [], "Science Operations Working Group of the rover mission.", true],
+    ["m20", "NASA's Mars 2020 rover mission, used as a reference for MMGIS.", "Mars 2020", ["Perseverance"], "NASA Mars rover mission launched in 2020.", true],
+    ["TK", "Role responsible for creating and maintaining official targets.", "Target Keeper", [], "Role that creates official targets in MMGIS and synchronises them with the DAR.", true],
+    ["SKP-FT", "Field trials of the SKP activity giving access to scientists.", "SKP Field Trials", [], "Field trial campaign of the SKP project.", true],
+    ["Integrated Activity Plan", "Plan combining engineering and science partial plans for a complete Sol.", "Integrated Plan", [], "Complete candidate Activity Plan covering the full duration of a single Sol.", true],
+    ["Digital Terrain Model", "Elevation model of the terrain.", "DTM", [], "Terrain elevation data loaded as tiles in MMGIS.", true],
+    ["Pro3D", "3D visualisation tool used in the ROCC.", "PRo3D", [], "Interactive 3D viewer for planetary surface reconstructions.", true],
+    ["Integrated Plan", "Complete candidate Activity Plan covering a full Sol.", "Activity Plan", ["AP"], "Operational product describing the sequence of activities the Rover executes in a Sol.", false],
+    ["Uploaded Plan", "Validated plan delivered for uplink to the Rover.", "Validated Plan", [], "Activity Plan formally verified and approved for execution.", false],
+    ["Planning Target", "Target identified during planning before any rover observation.", "Target", [], "A location or object of operational or scientific interest.", false],
+    ["Local Target", "Target observed by the rover with confirmed position.", "Planning Target", [], "Target identified during planning before any rover observation.", false],
+    ["dar_ci", "Command line tool to query and fetch data from the DAR.", "DAR", [], "Archive that stores the operational entities generated during rover planning and operations.", false],
+    ["Notional Traverse", "Rough traverse defined by the long-term planner.", "Long-Term Planner", [], "Role defining notional traverses and long-term exploration strategy.", false],
+    ["User Authentication", "Options for authenticating users in the deployed environment.", "ExoMars Rosalind Franklin Mission", ["RFM"], "ESA rover mission to Mars.", false],
+    ["Target Promotion", "Process by which a suggested target becomes an actual target once named.", "Target", [], "A location or object of operational or scientific interest.", false],
+    ["Regions of Interest", "Named regions acting as strategic targets.", "Target", [], "A location or object of operational or scientific interest.", false],
+    ["Wedge Draw Tool", "Proposed MMGIS tool for drawing camera viewing wedges.", "Draw Tool", [], "MMGIS tool for drawing and publishing features.", false],
+    ["Tactical Planning Cycle", "Process turning activity plans into validated commands for Sol N.", "Strategic Planning Cycle", [], "Process preparing future rover activities over several horizons.", false],
+    ["Forbidden Area", "Polygon area the rover must stay away from.", "Area of Interest", [], "Polygon area that possibly contains points of interest.", false],
+
+    ["Data Archive and Retrieval", "System that archives operational products of the rover mission.", "DAR", [], "Archive that stores the operational entities generated during rover planning and operations.", true],
+    ["Multi-Mission Geographic Information System", "Web-based GIS used for planning across missions.", "MMGIS", [], "Web mapping tool used for geospatial strategic planning.", true],
+    ["Rover Operation Control Center", "Facility from which the rover is operated.", "Rover Operations Control Centre", ["ROCC"], "Ground centre in Turin that operates the rover.", true],
+    ["ROI", "Region the science team wants to study further.", "Regions of Interest", [], "Named regions acting as strategic targets.", true],
+    ["Partial Plan", "Plan prepared by one team covering only part of a Sol.", "Integrated Plan", [], "Complete candidate Activity Plan covering the full duration of a single Sol.", false],
+    ["Control Team", "Team that commands the rover and checks its health.", "Science Team", [], "Team of scientists that proposes observations.", false],
+    ["PRo3D", "Interactive 3D viewer for planetary surface reconstructions.", "MMGIS", [], "Web mapping tool used for geospatial strategic planning.", false],
+    ["RVP", "Rover visualisation and planning tool used in the ROCC.", "MMGIS", [], "Web mapping tool used for geospatial strategic planning.", false],
+    ["Mars 2020", "NASA Mars rover mission launched in 2020.", "ExoMars Rosalind Franklin Mission", ["RFM"], "ESA rover mission to Mars.", false],
+    ["Experiment Cycle", "Sequence of rover activities that runs one scientific experiment.", "Measurement Cycle", [], "Sequence of instrument operations that acquires one measurement.", false]
+  ]
+}

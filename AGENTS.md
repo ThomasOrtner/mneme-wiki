@@ -93,6 +93,10 @@ There are two agent audiences: this file is for agents that write **code**.
 | TD-20 | **Front matter round trip:** the original front-matter block is kept verbatim and only re-serialised (PyYAML; existing key order kept, new keys in schema order, newline style and BOM kept) when `meta` actually changed. Comments in a *changed* block are lost | Unchanged files stay byte-identical, so diffs show only real edits; no own YAML emitter or `ruamel.yaml` needed |
 | TD-21 | The inbox defaults to `<vault>/../inbox`; `WIKI_INBOX_DIR` overrides it | Many vaults (TD-16): each gets its own inbox, independent of the working directory |
 | TD-22 | Search scores title+aliases, lead and body as **separate BM25 fields** (weights 3/2/1) with the always-positive Lucene IDF, built in memory per call | M2: rank_bm25's Okapi IDF floors terms found in > half the pages, and repeated title tokens saturate, so a short page that merely mentions a term outranked the page titled with it |
+| TD-23 | **Integration writes into an in-memory `Workspace`** (a `Vault` overlay) and flushes only after every stage ran and lint shows no *new* errors; `--dry-run` prints the overlay's diff | All-or-nothing per source: a half-integrated vault never reaches disk or git; dry runs exercise exactly the code that writes |
+| TD-24 | `integrate` refuses a vault with uncommitted changes and a source whose `origin` is already integrated | One commit = one source (BR-11); re-integrating would duplicate claims. Updating a changed source is a separate, later operation |
+| TD-25 | Pages are edited **section by section**: untouched sections stay byte-identical; a final check rejects any edit that loses a link target of the old body | L-4 without trusting the model's `replace`; keeps human text and diffs small |
+| TD-26 | Thinking is set per role (`THINK_<ROLE>`), default on for `resolve` only | M0: resolve needs it; patch thinking is 5× slower and is decided by the M4 bench |
 
 Record new decisions as new `TD-n` rows; don't silently rewrite old ones.
 

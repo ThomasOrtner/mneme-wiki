@@ -27,7 +27,7 @@ mneme-wiki = "mneme_wiki.cli:main"
 include = ["mneme_wiki*"]
 
 [tool.setuptools.package-data]
-mneme_wiki = ["templates/*.md"]
+mneme_wiki = ["templates/*.md", "prompts/*.md"]
 
 [tool.ruff]
 line-length = 100

@@ -40,6 +40,15 @@ MODELS: dict[str, str | None] = {
 }
 MODELS["judge"] = os.getenv("MODEL_JUDGE", "").strip() or None
 
+# Thinking per role (qwen3). M0: resolve needs it (no false merges only with thinking);
+# patch with thinking was 5x slower, on vs off is decided by the M4 bench.
+_THINK_DEFAULTS = {"resolve": "1"}
+THINKING: dict[str, bool] = {
+    role: _env(f"THINK_{role.upper()}", _THINK_DEFAULTS.get(role, "0")).lower()
+    in ("1", "true", "yes", "on")
+    for role in ROLES
+}
+
 
 def inbox_dir(vault: Path) -> Path:
     """The inbox for `vault`: WIKI_INBOX_DIR if set, else `<vault>/../inbox`.
