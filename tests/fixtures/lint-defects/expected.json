@@ -1,0 +1,9 @@
+{"findings": [
+  ["uncited",         "concepts/claims.md", 13],
+  ["uncited",         "concepts/claims.md", 16],
+  ["missing-heading", "concepts/claims.md", 32],
+  ["missing-heading", "concepts/claims.md", 32],
+  ["broken-link",     "entities/rocc.md", 1],
+  ["duplicate-name",  "entities/rocc.md", 1],
+  ["duplicate-name",  "entities/rover-ops.md", 1]
+]}

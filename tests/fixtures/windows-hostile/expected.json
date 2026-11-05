@@ -1,0 +1,6 @@
+{"findings": [
+  ["orphan",  "concepts/Größe des Rovers.md", 1],
+  ["uncited", "concepts/Größe des Rovers.md", 10],
+  ["orphan",  "entities/ROCC.md", 1],
+  ["uncited", "entities/ROCC.md", 11]
+]}

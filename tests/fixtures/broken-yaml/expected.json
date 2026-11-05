@@ -1,0 +1,14 @@
+{"findings": [
+  ["frontmatter", "concepts/bad-syntax.md", 1],
+  ["frontmatter", "concepts/duplicate-key.md", 1],
+  ["frontmatter", "concepts/invalid-schema.md", 1],
+  ["frontmatter", "concepts/invalid-schema.md", 1],
+  ["frontmatter", "concepts/invalid-schema.md", 1],
+  ["frontmatter", "concepts/invalid-schema.md", 1],
+  ["frontmatter", "concepts/invalid-schema.md", 1],
+  ["frontmatter", "concepts/missing-type-fields.md", 1],
+  ["orphan",      "concepts/missing-type-fields.md", 1],
+  ["frontmatter", "concepts/no-front-matter.md", 1],
+  ["frontmatter", "concepts/not-a-mapping.md", 1],
+  ["frontmatter", "concepts/unterminated.md", 1]
+]}

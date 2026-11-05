@@ -1,0 +1,8 @@
+{"findings": [
+  ["orphan",          "concepts/orphan.md", 1],
+  ["broken-link",     "concepts/orphan.md", 10],
+  ["uncited",         "concepts/orphan.md", 10],
+  ["broken-link",     "entities/rocc.md", 11],
+  ["ambiguous-link",  "entities/rocc.md", 12],
+  ["missing-heading", "entities/rocc.md", 12]
+]}

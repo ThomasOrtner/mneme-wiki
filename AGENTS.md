@@ -92,6 +92,7 @@ There are two agent audiences: this file is for agents that write **code**.
 | TD-19 | **Linking is code (autolink),** the model only adds links it is sure of | M0: code gave ~2 links/page, the model without thinking 0.16 |
 | TD-20 | **Front matter round trip:** the original front-matter block is kept verbatim and only re-serialised (PyYAML; existing key order kept, new keys in schema order, newline style and BOM kept) when `meta` actually changed. Comments in a *changed* block are lost | Unchanged files stay byte-identical, so diffs show only real edits; no own YAML emitter or `ruamel.yaml` needed |
 | TD-21 | The inbox defaults to `<vault>/../inbox`; `WIKI_INBOX_DIR` overrides it | Many vaults (TD-16): each gets its own inbox, independent of the working directory |
+| TD-22 | Search scores title+aliases, lead and body as **separate BM25 fields** (weights 3/2/1) with the always-positive Lucene IDF, built in memory per call | M2: rank_bm25's Okapi IDF floors terms found in > half the pages, and repeated title tokens saturate, so a short page that merely mentions a term outranked the page titled with it |
 
 Record new decisions as new `TD-n` rows; don't silently rewrite old ones.
 

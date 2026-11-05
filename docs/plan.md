@@ -83,15 +83,40 @@ See [M1 tutorial](milestones/M1-scaffold.md).
 
 ### M2: Lint, index, log
 
-- [ ] `lint.py` deterministic checks: broken links, orphans, invalid or missing
+- [x] `lint.py` deterministic checks: broken links, orphans, invalid or missing
       front matter, uncited claims, duplicate aliases.
       `mneme-wiki lint [--json]`, exits non-zero on errors.
-- [ ] `index_log.py`: `mneme-wiki reindex` regenerates `index.md`; `append_log()`
+- [x] `index_log.py`: `mneme-wiki reindex` regenerates `index.md`; `append_log()`
       used by every write operation.
-- [ ] `search.py`: BM25 over pages (title, aliases, lead paragraph, body),
+- [x] `search.py`: BM25 over pages (title, aliases, lead paragraph, body),
       `mneme-wiki search "<q>" [--json]`.
 
+Decided before M2 (2026-11-05):
+
+- **Uncited claim** = a prose paragraph or list item of ≥ 8 words in an entity,
+  concept or synthesis page without a link to a page in `sources/`. Headings,
+  callouts/quotes, tables, code, embeds are exempt, as are `source`, `index` and
+  `log` pages. A heuristic, so it is a warning.
+- **Severity:** errors = broken links (body and front-matter link lists),
+  unparsable/missing/invalid front matter, duplicate titles/aliases, case
+  collisions. Warnings = orphans, uncited claims, ambiguous bare links, links to
+  missing headings. `lint` exits non-zero on errors only.
+- **Index line** = `[[path|Title]] — <first sentence of the lead paragraph>`
+  (citations and link syntax stripped, ≤ 100 chars). No new front-matter key.
+  `index.md` is regenerated in full; its front matter is kept.
+- **Fixtures:** each fixture vault has an `expected.json` with the exact lint
+  findings; tests compare the full set.
+- **No git in M2:** `reindex` and `append_log()` only write files; commits come
+  with `integrate` in M3.
+
 **Exit:** lint finds every planted defect in the fixture vaults.
+
+**Result (2026-11-05):** done. Five fixture vaults, each with an `expected.json`;
+lint reports exactly those findings, and every check except case collisions
+(which NTFS can't hold as a fixture) has a planted case. On the 107-page vault
+the M0 spike produced, lint checked 405 claim blocks and found nothing, as
+expected. Search scores each field separately (TD-22). 196 tests pass. See
+[M2 tutorial](milestones/M2-lint-index-log.md).
 
 ### M3: Integrate
 
@@ -246,6 +271,7 @@ complete(messages, *, schema=None, thinking=False) -> Result
 | `frontmatter.py` | Front-matter parse/serialise/validate |
 | `links.py` | Wikilink parsing/resolution, alias & backlink maps |
 | `vault.py` | Page I/O, slugs, path confinement, git |
+| `text.py` | Markdown blocks (paragraphs, list items, …) with line numbers, plain text, lead sentence, search tokens |
 | `index_log.py` | `index.md` generation, `log.md` appends |
 | `search.py` | BM25 page search |
 | `lint.py` | Deterministic checks |
