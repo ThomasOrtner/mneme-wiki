@@ -180,7 +180,9 @@ callouts; links mostly in the prose.
   `file:line` references), how to run and try it yourself, every decision made
   and *why* (including alternatives rejected), what was learned or measured,
   and the known gaps. A reader should be able to understand the milestone
-  without reading the diff first.
+  without reading the diff first. Render it (and `docs/plan.md`) to PDF next to the
+  `.md` (git-ignored):
+  `pandoc X.md -o X.pdf --pdf-engine=xelatex -V geometry:margin=2cm -V mainfont="Segoe UI" -V monofont="Consolas"`.
 - **One milestone at a time:** when a milestone's exit condition is met, tick
   its boxes in `docs/plan.md`, write the milestone tutorial, make one commit (`feat: M<n> <name>` or
   `docs: …`), report the result, and **wait for the user's confirmation**

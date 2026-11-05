@@ -20,6 +20,9 @@ workspace and reaches the vault only if lint shows no new error. Edits are
 applied section by section, so text nobody touched stays byte-identical. Every
 model decision is logged.
 
+The whole run as a flow chart (gates, stages, model calls, where each file goes):
+page **4 "Integrate run (as built)"** of [`docs/architecture.drawio`](../architecture.drawio).
+
 ---
 
 ## 1. What was built
