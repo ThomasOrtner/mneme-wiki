@@ -204,9 +204,8 @@ worker at a time. A real stdio round trip is tested. See
       repeat the cell above, drop `<!-- image -->`, unescape HTML entities and `\_`
       (M0: cut one document to a third of its size).
 
-**Result (2026-11-07):** done on mneme's branch `feature/wiki-packet-export`
-(`3639dba`), **not merged yet**: it waits for review. On the three corpus documents the
-output equals the M0 prototype apart from line endings. See
+**Result (2026-11-07):** done, merged into mneme's `main` (PR #15, `1e3fecd`).
+On the three corpus documents the output equals the M0 prototype apart from line endings. See
 [M7 tutorial](milestones/M7-mneme-exporter.md).
 
 ---

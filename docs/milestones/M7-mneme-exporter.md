@@ -4,7 +4,7 @@
 projects depending on each other's code?
 
 **Short answer:** yes. `mneme-export-wiki-packet <doc_id>… --inbox <path>` (in
-the mneme repo, branch `feature/wiki-packet-export`, commit `3639dba`) writes
+the mneme repo, merged as PR #15, `1e3fecd`) writes
 one source packet per document: the contract from TD-8, nothing more. On the
 three corpus documents its output is identical to the M0 prototype
 (`spike/make_packets.py`) apart from line endings, which the wiki normalises
@@ -115,14 +115,12 @@ Two intended differences:
 | **Refuse to overwrite without `--force`** | A packet in the inbox may already have been edited by hand | Always overwrite |
 | **`origin = mneme:<doc_id>`** | Stable, unique, and what the wiki's re-integration guard uses | The file path (changes when the store moves) |
 | **Copy `summary.md` and `toc.json` only if non-empty** | An empty file would tell the wiki "there is a summary" | Always copy |
-| **Work on a branch, not pushed** | mneme is a separate project with its own review | Committing to its `main` |
+| **Work on a branch, merged by PR** | mneme is a separate project with its own review | Committing to its `main` |
 
 ---
 
 ## 5. Known gaps
 
-- **Not merged or pushed:** the branch `feature/wiki-packet-export` in mneme is
-  waiting for your review.
 - **mneme's venv has no pytest**; the tests ran with mneme-wiki's interpreter.
 - **`toc.json` isn't used by the wiki yet** (planned for citation locators).
 - **No MCP tool in mneme for the export**; an agent can only call it through a
