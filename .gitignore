@@ -30,3 +30,6 @@ spike/out/
 # Dev vault (its own git repo, TD-16) and its inbox
 examples/vault/
 examples/inbox/
+
+# Obsidian settings when docs/wiki is opened as a vault
+.obsidian/
