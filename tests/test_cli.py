@@ -22,6 +22,29 @@ def test_init_json(tmp_path: Path, capsys, git_identity) -> None:  # noqa: F811
     assert out["ok"] is False and "not an empty folder" in out["error"]
 
 
+def test_status(tmp_path: Path, capsys, git_identity) -> None:  # noqa: F811
+    assert cli.main(["init", str(tmp_path / "v"), "--json"]) == 0
+    capsys.readouterr()
+    inbox = tmp_path / "inbox"
+    (inbox / "new").mkdir(parents=True)
+    meta = '{"title": "New", "source_type": "note", "origin": "manual", "date": "2026-11-07"}'
+    (inbox / "new/source.meta.json").write_text(meta, encoding="utf-8")
+    (inbox / "bad").mkdir()
+    (inbox / "bad/source.meta.json").write_text("{", encoding="utf-8")
+
+    assert cli.main(["status", "--vault", str(tmp_path / "v"), "--json"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["ok"] and data["pages"] and data["uncommitted_changes"] is False
+    assert data["packets"][1] == {"packet": "new", "title": "New", "integrated_as": None}
+    assert "error" in data["packets"][0]
+
+    assert cli.main(["status", "--vault", str(tmp_path / "v")]) == 0
+    out = capsys.readouterr().out
+    assert "git:" in out and "new: not integrated yet" in out
+
+    assert cli.main(["status", "--vault", str(tmp_path / "nope")]) == 2
+
+
 def test_init_human_output(tmp_path: Path, capsys, git_identity) -> None:  # noqa: F811
     assert cli.main(["init", str(tmp_path / "v"), "--language", "de"]) == 0
     assert "Vault ready" in capsys.readouterr().out

@@ -21,7 +21,7 @@ default, with a benchmark that shows how each stage performs per local model.
 - [ ] `mneme-wiki lint` reports zero errors on the resulting vault.
 - [ ] Each integration is one reviewable git commit in the vault, with a
       `log.md` entry.
-- [ ] `mneme-wiki query --file` answers with citations and saves a synthesis page.
+- [x] `mneme-wiki query --file` answers with citations and saves a synthesis page.
 - [ ] All of the above is available as MCP tools.
 - [ ] A bench run compares qwen3:14b with at least 2 other local models on the
       fixture corpus.
@@ -165,10 +165,18 @@ model instead of recorded M0 responses (M0 stored none). 251 tests. See
 
 ### M5: Query
 
-- [ ] `query.py`: BM25 + index → top pages within the token budget → answer
+- [x] `query.py`: BM25 + index → top pages within the token budget → answer
       with `[[citations]]`; checks that every cited page exists.
-- [ ] `--file` saves the answer as a `synthesis` page (with a `question` field),
+- [x] `--file` saves the answer as a `synthesis` page (with a `question` field),
       reindex, log, commit.
+- [x] Added after the first real run: one retry for uncited answers, uncited
+      answers are never filed (TD-28); abbreviation expansions no source backs
+      are removed during integration (TD-29); `mneme-wiki status`.
+
+**Result (2026-11-07):** done. 30 of 30 real answers cite at least one source
+(79 % before the fix; that's per answer, not per fact), the trick question was
+always refused, about 3.7 s per question. Invented expansions fell from 4.0 to 0.3
+per vault at no measurable cost. See [M5 tutorial](milestones/M5-query.md).
 
 ### M6: MCP server
 
@@ -213,6 +221,7 @@ Revised by M0 (see [M0 tutorial](milestones/M0-feasibility.md)):
 | Plan | code | claims grouped by target page, new page paths | — |
 | Patch | LLM, one call per page | page + its new claims + linkable pages → `{lead, ops[{section, op: append\|replace, text}]}` | thinking on/off decided in M4 |
 | Validate & apply | code | links only to known pages, every fact line cited (added + counted if missing), `replace` may not drop links or shrink < 60 %, lead may not lose links, escaped `\n` repaired. Retry once, then reject with the reason | — |
+| Abbreviations | code | expansions neither the source, the page's names nor its earlier text back up are removed (TD-29) | — |
 | Autolink | code | first plain mention of another page's title/alias → `[[link]]`, longest first, short names case-sensitive | — |
 | Finish | code | source page lists touched pages, `index.md`, `log.md`, git commit, run report | — |
 
@@ -290,6 +299,8 @@ complete(messages, *, schema=None, thinking=False) -> Result
 | `edits.py` | Edit data model, validation, apply |
 | `integrate.py` | Stage orchestration for one packet |
 | `query.py` | Answer + file-back |
+| `expansions.py` | Abbreviation expansions the evidence doesn't back |
+| `status.py` | Vault overview, for the CLI and MCP |
 | `bench.py` | Benchmark harness |
 | `cli.py` | CLI (thin) |
 | `mcp_server.py` | MCP tools |

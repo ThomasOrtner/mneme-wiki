@@ -24,7 +24,7 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from . import config, edits, links, packet
+from . import config, edits, expansions, links, packet
 from . import frontmatter as fm
 from .index_log import append_log, reindex
 from .lint import lint
@@ -113,6 +113,23 @@ def _call_stats(calls: list[Call]) -> dict[str, dict]:
             "tokens_out_mean": round(sum(c.tokens_out for c in cs) / len(cs)),
         }
     return out
+
+
+def _strip_expansions(
+    ws: Workspace, vault: Vault, paths: list[str], source_text: str, counters: dict[str, int]
+) -> None:
+    """Remove abbreviation expansions this run invented (runs before autolink, whose links
+    would split the phrases). What the page already said or names itself is evidence, so
+    text that was in the vault before this run is left alone."""
+    for rel in paths:
+        page = ws.read_page(rel)
+        aliases = page.meta.get("aliases") if isinstance(page.meta.get("aliases"), list) else []
+        old = vault.read_page(rel).body if vault.exists(rel) else ""
+        evidence = "\n".join([source_text, page.title, *map(str, aliases), old])
+        body = expansions.strip(page.body, evidence, counters)
+        if body != page.body:
+            page.body = body
+            ws.write_page(page)
 
 
 def _merge_counters(into: dict[str, int], more: dict[str, int], prefix: str = "") -> None:
@@ -270,8 +287,9 @@ def integrate(
         {"page": r.path, "reason": r.error, "retry": False} for r in results if r.error
     ]
 
-    # -- autolink, source page list ----------------------------------------------------------------
+    # -- abbreviations, autolink, source page list ------------------------------------------------
     touched = [r.path for r in written]
+    _strip_expansions(ws, vault, [*touched, source_path], pkt.text, counters)
     added = autolink_stage.autolink(ws, [*touched, source_path])
     report.autolinks = sum(added.values())
     src_page = ws.read_page(source_path)

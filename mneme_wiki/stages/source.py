@@ -31,7 +31,9 @@ SCHEMA = {
 SYSTEM = (
     "Summarise the document for a wiki source page. summary: 2-4 sentences, what the "
     "document is and covers. key_points: 4-10 short bullet points with the most important "
-    "content. Use only the document. Write in the language of the document."
+    "content. Use only the document. Write abbreviations exactly as the document does: "
+    "never spell one out unless the document itself does. Write in the language of the "
+    "document."
 )
 
 

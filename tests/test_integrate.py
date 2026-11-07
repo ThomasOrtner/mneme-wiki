@@ -159,6 +159,49 @@ def test_failed_patch_still_creates_new_page_skeleton(vault: Vault) -> None:
     assert lint(vault).ok
 
 
+class Inventing(Toy):
+    """Spells out abbreviations the way local models do, in the summary and in patches."""
+
+    def summary(self, user: str) -> dict:
+        return {
+            "summary": "The ROCC (Rover Orbit Command Centre) uses the Data Archive and "
+            "Retrieval (DAR).",
+            "key_points": ["One."],
+        }
+
+    def patch(self, user: str) -> dict:
+        answer = super().patch(user)
+        for op in answer["ops"]:
+            op["text"] = op["text"].replace("- ", "- The DAR (Data Archive Room) helps. ", 1)
+        return answer
+
+
+def test_invented_expansions_never_reach_the_vault(vault: Vault) -> None:
+    report, _ = run(vault, "ops-handbook", Inventing(kinds=KINDS))
+    assert report.counters["expansion_removed"] >= 3
+    pages = "\n".join(vault.read_text(rel) for rel in vault.files() if rel.endswith(".md"))
+    for invented in (
+        "Rover Orbit Command Centre",
+        "Data Archive and Retrieval",
+        "Data Archive Room",
+    ):
+        assert invented not in pages
+    assert "uses the DAR" in pages and "The DAR helps." in pages
+
+
+def test_expansions_already_in_the_vault_stay(vault: Vault) -> None:
+    run(vault, "ops-handbook")
+    rel = "entities/rover-operations-control-centre.md"  # the second source updates it
+    page = vault.read_page(rel)
+    page.body += "\nThe ROCC (Rover Orbit Command Centre) is a human note.\n"
+    vault.write_page(page)
+    vault.git("add", "-A")
+    vault.git("commit", "-m", "human edit")
+    report, _ = run(vault, "planning-notes", Inventing(kinds=KINDS))
+    assert rel in report.updated
+    assert "(Rover Orbit Command Centre) is a human note" in vault.read_text(rel)
+
+
 def test_cli_integrate_json_and_stage(vault: Vault, capsys, monkeypatch) -> None:
     llm, _ = fake_llm(Toy(kinds=KINDS))
     monkeypatch.setattr("mneme_wiki.integrate.LLM", lambda **kw: llm)

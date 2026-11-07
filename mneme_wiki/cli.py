@@ -190,6 +190,73 @@ def _run_json(report, with_diff: bool = False) -> dict:
     return data
 
 
+def cmd_status(args: argparse.Namespace) -> int:
+    from .status import overview
+
+    try:
+        data = overview(_vault(args))
+    except (VaultError, OSError) as exc:
+        return _fail(args, exc)
+    if args.json:
+        _emit_json({"ok": True, **data})
+        return 0
+    pages = ", ".join(f"{n} {t}" for t, n in data["pages"].items()) or "no pages"
+    console.print(f"[bold]{escape(data['vault'])}[/bold]: {pages}")
+    if data["unreadable_pages"]:
+        console.print(f"[red]{data['unreadable_pages']} unreadable pages[/red]")
+    if data["git_head"] is None:
+        console.print("git: not a repository")
+    else:
+        dirty = "[yellow]uncommitted changes[/yellow]" if data["uncommitted_changes"] else "clean"
+        console.print(f"git: {escape(data['git_head'])} ({dirty})")
+    for entry in data["last_log_entries"]:
+        console.print(f"  {escape(entry)}")
+    console.print(f"inbox: {escape(data['inbox'])}")
+    for item in data["packets"]:
+        state = item.get("error") or item.get("integrated_as") or "not integrated yet"
+        console.print(f"  {escape(item['packet'])}: {escape(str(state))}")
+    return 0
+
+
+def cmd_query(args: argparse.Namespace) -> int:
+    from .query import ask, file_answer
+
+    out = err_console if args.json else console
+
+    def log(msg: str) -> None:
+        out.print(escape(msg))
+
+    try:
+        vault = _vault(args)
+        result = ask(vault, args.question, log=log)
+    except (VaultError, ValueError) as exc:
+        return _fail(args, exc)
+    file_error = None
+    if args.file:  # a refused filing must not cost the user the answer
+        try:
+            file_answer(vault, result, log=log)
+        except VaultError as exc:
+            file_error = str(exc)
+    if args.json:
+        ok = result.error is None and file_error is None
+        _emit_json({"ok": ok, **result.to_dict(), "file_error": file_error})
+    else:
+        console.print(escape(result.answer or f"(no answer: {result.error})"))
+        if result.pages:
+            console.print("\n[dim]pages used:[/dim] " + ", ".join(result.pages))
+        if result.filed:
+            console.print(f"[green]filed as[/green] {result.filed}")
+        if result.answerable and not result.sources:
+            err_console.print("[yellow]warning:[/yellow] this answer cites no source")
+        for item in result.unbacked:
+            err_console.print(f"[yellow]warning:[/yellow] not backed by the pages: {escape(item)}")
+        if file_error:
+            err_console.print(f"[red]not filed:[/red] {escape(file_error)}")
+    if file_error:
+        return 2
+    return 0 if result.error is None else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="mneme-wiki", description="Local, LLM-maintained wiki of interlinked Markdown notes."
@@ -236,6 +303,14 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("source", "entity", "concept", "synthesis"),
         help="only pages of this type (repeatable)",
     )
+
+    vault_cmd("status", "pages, recent log entries, git state, inbox packets", cmd_status)
+    p = vault_cmd("query", "answer a question from the wiki, with citations", cmd_query)
+    p.add_argument("question")
+    p.add_argument(
+        "--file", action="store_true", help="save the answer as a synthesis page (one commit)"
+    )
+
     return parser
 
 
