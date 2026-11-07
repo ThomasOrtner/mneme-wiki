@@ -1,6 +1,6 @@
 # Development
 
-← [Home](Home.md) · Rules for coding agents and contributors: [AGENTS.md](../../AGENTS.md)
+← [Home](Home.md) · Rules for coding agents and contributors: [AGENTS.md](https://github.com/ThomasOrtner/mneme-wiki/blob/main/AGENTS.md)
 
 ## Setup
 
@@ -48,7 +48,7 @@ An architecture diagram is in `docs/architecture.drawio`.
 - **Library code doesn't print**; it reports through a `log` callable.
 
 The full list, with the reasoning behind each choice, is the TD table in
-[AGENTS.md](../../AGENTS.md#4-technical-decisions).
+[AGENTS.md](https://github.com/ThomasOrtner/mneme-wiki/blob/main/AGENTS.md#4-technical-decisions).
 
 ## Tests
 
@@ -68,11 +68,11 @@ The full list, with the reasoning behind each choice, is the TD table in
 
 | Milestone | Delivered |
 |---|---|
-| [M0](../milestones/M0-feasibility.md) | Feasibility spike on `qwen3:14b`; resolve redesigned as pairwise yes/no |
-| [M1](../milestones/M1-scaffold.md) | Package, front matter round trip, links, vault I/O, `init` |
-| [M2](../milestones/M2-lint-index-log.md) | Lint, index, log, BM25 search |
-| [M3](../milestones/M3-integrate.md) | The integration pipeline |
-| [M4](../milestones/M4-bench.md) | Benchmark harness and model choice |
-| [M5](../milestones/M5-query.md) | Query with citations and file-back |
-| [M6](../milestones/M6-mcp-server.md) | MCP server |
-| [M7](../milestones/M7-mneme-exporter.md) | Packet exporter in mneme |
+| [M0](https://github.com/ThomasOrtner/mneme-wiki/blob/main/docs/milestones/M0-feasibility.md) | Feasibility spike on `qwen3:14b`; resolve redesigned as pairwise yes/no |
+| [M1](https://github.com/ThomasOrtner/mneme-wiki/blob/main/docs/milestones/M1-scaffold.md) | Package, front matter round trip, links, vault I/O, `init` |
+| [M2](https://github.com/ThomasOrtner/mneme-wiki/blob/main/docs/milestones/M2-lint-index-log.md) | Lint, index, log, BM25 search |
+| [M3](https://github.com/ThomasOrtner/mneme-wiki/blob/main/docs/milestones/M3-integrate.md) | The integration pipeline |
+| [M4](https://github.com/ThomasOrtner/mneme-wiki/blob/main/docs/milestones/M4-bench.md) | Benchmark harness and model choice |
+| [M5](https://github.com/ThomasOrtner/mneme-wiki/blob/main/docs/milestones/M5-query.md) | Query with citations and file-back |
+| [M6](https://github.com/ThomasOrtner/mneme-wiki/blob/main/docs/milestones/M6-mcp-server.md) | MCP server |
+| [M7](https://github.com/ThomasOrtner/mneme-wiki/blob/main/docs/milestones/M7-mneme-exporter.md) | Packet exporter in mneme |

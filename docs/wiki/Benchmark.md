@@ -1,7 +1,7 @@
 # Benchmark
 
-← [Home](Home.md) · Results: [bench/README.md](../../bench/README.md) ·
-Method: [M4 tutorial](../milestones/M4-bench.md)
+← [Home](Home.md) · Results: [bench/README.md](https://github.com/ThomasOrtner/mneme-wiki/blob/main/bench/README.md) ·
+Method: [M4 tutorial](https://github.com/ThomasOrtner/mneme-wiki/blob/main/docs/milestones/M4-bench.md)
 
 Which local model should run which stage? `mneme-wiki bench` answers that with data
 instead of guesses.

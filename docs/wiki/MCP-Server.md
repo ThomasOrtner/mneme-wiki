@@ -1,6 +1,6 @@
 # MCP Server
 
-← [Home](Home.md) · Details: [M6 tutorial](../milestones/M6-mcp-server.md)
+← [Home](Home.md) · Details: [M6 tutorial](https://github.com/ThomasOrtner/mneme-wiki/blob/main/docs/milestones/M6-mcp-server.md)
 
 `mneme-wiki-mcp` exposes the vault to any [MCP](https://modelcontextprotocol.io) client
 over stdio. One server serves one vault: `WIKI_VAULT_DIR`.

@@ -47,7 +47,7 @@ mneme-export-wiki-packet <doc_id> [<doc_id> ...] --inbox D:\wikis\inbox
 The exporter (in the mneme repo) maps the registry metadata, sets
 `origin = mneme:<doc_id>`, copies the summary and ToC, and cleans the Markdown (compact
 tables, drop `<!-- image -->`, unescape entities). See the
-[M7 tutorial](../milestones/M7-mneme-exporter.md).
+[M7 tutorial](https://github.com/ThomasOrtner/mneme-wiki/blob/main/docs/milestones/M7-mneme-exporter.md).
 
 ## Integrating
 

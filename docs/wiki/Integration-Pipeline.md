@@ -1,7 +1,7 @@
 # Integration Pipeline
 
-← [Home](Home.md) · Full design: [plan.md → Integration stages](../plan.md#integration-stages),
-walkthrough with code references: [M3 tutorial](../milestones/M3-integrate.md).
+← [Home](Home.md) · Full design: [plan.md → Integration stages](https://github.com/ThomasOrtner/mneme-wiki/blob/main/docs/plan.md#integration-stages),
+walkthrough with code references: [M3 tutorial](https://github.com/ThomasOrtner/mneme-wiki/blob/main/docs/milestones/M3-integrate.md).
 
 `mneme-wiki integrate <packet>` turns one source packet into one git commit. Code
 orchestrates; the model only makes small, checkable decisions.

@@ -41,7 +41,7 @@ See [Integration Pipeline](Integration-Pipeline.md).
 mneme-wiki lint [--json]
 ```
 
-Exit 1 on errors. See [Lint, Search and Query](Lint-Search-Query.md#lint).
+Exit 1 on errors. See [Lint, Search and Query](Lint-Search-Query.md).
 
 ## reindex
 
