@@ -11,7 +11,8 @@ __pycache__/
 # Benchmark corpus is built from private project documents: local only.
 bench/corpus/*
 !bench/corpus/README.md
-bench/results/*
+bench/results/*/*
+bench/results/_superseded/
 !bench/results/*/summary.md
 
 # Spike outputs

@@ -1,0 +1,14 @@
+# Every role on the smaller qwen3:8b, same thinking settings as the baseline.
+label = "qwen3-8b"
+[models]
+extract = "ollama:qwen3:8b"
+resolve = "ollama:qwen3:8b"
+patch   = "ollama:qwen3:8b"
+summary = "ollama:qwen3:8b"
+[thinking]
+resolve = true
+patch   = false
+[judge]
+model = "ollama:qwen3:14b"   # fixed judge for every configuration
+sample = 15
+

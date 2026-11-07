@@ -1,0 +1,14 @@
+# All roles on qwen3:14b; resolve thinks, patch doesn't (the M3 defaults).
+label = "baseline"
+[models]
+extract = "ollama:qwen3:14b"
+resolve = "ollama:qwen3:14b"
+patch   = "ollama:qwen3:14b"
+summary = "ollama:qwen3:14b"
+[thinking]
+resolve = true
+patch   = false
+[judge]
+model = "ollama:qwen3:14b"   # fixed judge for every configuration
+sample = 15
+

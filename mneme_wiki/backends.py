@@ -44,11 +44,18 @@ class Backend(Protocol):
 class OllamaBackend:
     """Local inference through the `ollama` package; `format=<schema>` constrains output."""
 
-    def __init__(self, host: str = config.OLLAMA_BASE_URL, num_ctx: int = config.NUM_CTX) -> None:
+    def __init__(
+        self,
+        host: str = config.OLLAMA_BASE_URL,
+        num_ctx: int = config.NUM_CTX,
+        max_output_tokens: int = config.MAX_OUTPUT_TOKENS,
+        timeout_s: float = config.CALL_TIMEOUT_S,
+    ) -> None:
         import ollama  # imported lazily so tests never need a server
 
-        self._client = ollama.Client(host=host)
+        self._client = ollama.Client(host=host, timeout=timeout_s)
         self.num_ctx = num_ctx
+        self.max_output_tokens = max_output_tokens
 
     def complete(
         self,
@@ -66,10 +73,19 @@ class OllamaBackend:
                 messages=messages,
                 format=schema,
                 think=thinking,
-                options={"num_ctx": self.num_ctx, "temperature": temperature},
+                options={
+                    "num_ctx": self.num_ctx,
+                    "num_predict": self.max_output_tokens,
+                    "temperature": temperature,
+                },
             )
-        except Exception as exc:  # connection refused, model not pulled, server error
+        except Exception as exc:  # connection refused, model not pulled, timeout, server error
             raise BackendError(f"ollama {model}: {exc}") from exc
+        if getattr(response, "done_reason", None) == "length":
+            raise BackendError(
+                f"ollama {model}: answer cut off at {self.max_output_tokens} tokens "
+                "(MAX_OUTPUT_TOKENS); the model probably looped"
+            )
         message = response.message
         return Result(
             text=message.content or "",

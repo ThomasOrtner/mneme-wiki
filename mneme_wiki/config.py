@@ -32,6 +32,10 @@ LANGUAGE = _env("WIKI_LANGUAGE", "en")
 # ---------------------------------------------------------------------------
 OLLAMA_BASE_URL = _env("OLLAMA_BASE_URL", "http://localhost:11434")
 NUM_CTX = int(_env("NUM_CTX", "32768"))
+# Every call is bounded (L-3). M4: an uncapped qwen3:8b patch call looped for 9 h and
+# 327k tokens. 8192 is several times the largest real answer (~1.9k) plus thinking.
+MAX_OUTPUT_TOKENS = int(_env("MAX_OUTPUT_TOKENS", "8192"))
+CALL_TIMEOUT_S = float(_env("CALL_TIMEOUT_S", "600"))
 
 DEFAULT_MODEL = "ollama:qwen3:14b"
 ROLES = ("extract", "resolve", "patch", "summary", "query", "judge")

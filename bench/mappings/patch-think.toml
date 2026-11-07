@@ -1,0 +1,14 @@
+# Baseline with thinking on for the patch stage (M0: 5x slower, better structure?).
+label = "patch-think"
+[models]
+extract = "ollama:qwen3:14b"
+resolve = "ollama:qwen3:14b"
+patch   = "ollama:qwen3:14b"
+summary = "ollama:qwen3:14b"
+[thinking]
+resolve = true
+patch   = true
+[judge]
+model = "ollama:qwen3:14b"   # fixed judge for every configuration
+sample = 15
+

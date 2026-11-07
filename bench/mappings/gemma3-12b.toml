@@ -1,0 +1,14 @@
+# Every role on gemma3:12b. Gemma has no thinking mode, so resolve runs without it.
+label = "gemma3-12b"
+[models]
+extract = "ollama:gemma3:12b"
+resolve = "ollama:gemma3:12b"
+patch   = "ollama:gemma3:12b"
+summary = "ollama:gemma3:12b"
+[thinking]
+resolve = false
+patch   = false
+[judge]
+model = "ollama:qwen3:14b"   # fixed judge for every configuration
+sample = 15
+

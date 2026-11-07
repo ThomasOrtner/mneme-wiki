@@ -16,14 +16,14 @@ default, with a benchmark that shows how each stage performs per local model.
 
 ### Definition of done
 
-- [ ] Integrating 3 related real sources produces shared entity/concept pages
+- [x] Integrating 3 related real sources produces shared entity/concept pages
       with links in both directions and citations on claims (BR-4, BR-5).
-- [ ] `mneme-wiki lint` reports zero errors on the resulting vault.
-- [ ] Each integration is one reviewable git commit in the vault, with a
+- [x] `mneme-wiki lint` reports zero errors on the resulting vault.
+- [x] Each integration is one reviewable git commit in the vault, with a
       `log.md` entry.
 - [x] `mneme-wiki query --file` answers with citations and saves a synthesis page.
 - [ ] All of the above is available as MCP tools.
-- [ ] A bench run compares qwen3:14b with at least 2 other local models on the
+- [x] A bench run compares qwen3:14b with at least 2 other local models on the
       fixture corpus.
 
 ---
@@ -150,18 +150,25 @@ model instead of recorded M0 responses (M0 stored none). 251 tests. See
 
 ### M4: Bench (local models)
 
-- [ ] Mapping from stage role to model in config (`MODEL_<ROLE>`), overridable
+- [x] Mapping from stage role to model in config (`MODEL_<ROLE>`), overridable
       by a bench mapping file.
-- [ ] `bench.py` + `mneme-wiki bench --models <mapping.toml> --label <name>`.
-- [ ] Baseline run (all qwen3:14b) plus 2–3 other local models (e.g.
+- [x] `bench.py` + `mneme-wiki bench --models <mapping.toml> --label <name>`.
+- [x] Baseline run (all qwen3:14b) plus 2–3 other local models (e.g.
       `qwen3:8b`, `qwen3:30b-a3b`, `gemma3:12b`, whatever fits the hardware);
       write a short comparison to `bench/README.md`.
-- [ ] Patch stage: thinking on vs off, judged on page *quality* (structure,
+- [x] Patch stage: thinking on vs off, judged on page *quality* (structure,
       duplicate bullets), not only speed (M0: 5× slower, visibly better structure).
-- [ ] Repeat each configuration ≥ 3× — M0 showed ±15 % run-to-run variance in
+- [x] Repeat each configuration ≥ 3× — M0 showed ±15 % run-to-run variance in
       extraction.
 
 **Exit:** the model choice per stage is backed by data.
+
+**Result (2026-11-07):** done. Keep `qwen3:14b` for every role, thinking on for
+`resolve` only (TD-30): best gold coverage (29.7/33) with 0 wrong merges. `qwen3:8b`
+loses ~5 gold pages; `gemma3:12b` makes 1.7 wrong merges per run; patch thinking costs
+2.5× the run time for fewer copied headings only. An uncapped model call ran for
+9 hours, so every call is now bounded (TD-27). Mixed configurations weren't measured.
+See [M4 tutorial](milestones/M4-bench.md) and [bench/README.md](../bench/README.md).
 
 ### M5: Query
 
@@ -330,6 +337,8 @@ mneme-wiki status [--json]
 | `MODEL_JUDGE` | unset |
 | `THINK_<ROLE>` (`THINK_RESOLVE`, `THINK_PATCH`, …) | `1` for resolve, `0` otherwise |
 | `WIKI_LANGUAGE` | `en` |
+| `MAX_OUTPUT_TOKENS` | `8192` |
+| `CALL_TIMEOUT_S` | `600` |
 
 ---
 

@@ -257,6 +257,51 @@ def cmd_query(args: argparse.Namespace) -> int:
     return 0 if result.error is None else 1
 
 
+def cmd_bench(args: argparse.Namespace) -> int:
+    from . import bench  # heavy imports only when benchmarking
+
+    if args.compare:
+        try:
+            console.print(bench.compare([Path(d) for d in args.compare]), markup=False)
+        except (OSError, ValueError, KeyError) as exc:
+            return _fail(args, exc)
+        return 0
+    if args.ask:
+        qfile = Path(args.questions or Path(args.corpus) / "questions.md")
+        try:
+            questions = bench.load_questions(qfile)
+            for d in args.ask:
+                agg = bench.run_questions(
+                    Path(d), questions, query_model=args.query_model,
+                    log=lambda m: err_console.print(escape(m)),
+                )  # fmt: skip
+                console.print(f"{d}: {json.dumps(agg)}", markup=False)
+        except (OSError, ValueError, KeyError, VaultError) as exc:
+            return _fail(args, exc)
+        return 0
+    if not args.models:
+        return _fail(args, ValueError("--models MAPPING.toml is required (or --compare DIR...)"))
+    out = err_console if args.json else console
+
+    def log(msg: str) -> None:
+        out.print(escape(msg))
+
+    try:
+        mapping = bench.load_mapping(args.models, args.label)
+        result = bench.run_bench(
+            mapping, Path(args.corpus), out_root=Path(args.out), repeats=args.repeat,
+            packet_names=args.packets or None, log=log,
+        )  # fmt: skip
+    except (bench.BenchError, VaultError, PacketError, ValueError) as exc:
+        return _fail(args, exc)
+    if args.json:
+        _emit_json({"ok": True, "out": str(result.out_dir), "aggregate": result.aggregate})
+    else:
+        console.print((result.out_dir / "summary.md").read_text(encoding="utf-8"), markup=False)
+        console.print(f"results: {result.out_dir}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="mneme-wiki", description="Local, LLM-maintained wiki of interlinked Markdown notes."
@@ -311,6 +356,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--file", action="store_true", help="save the answer as a synthesis page (one commit)"
     )
 
+    p = sub.add_parser("bench", help="benchmark models per stage role on a fixed corpus")
+    p.add_argument("--models", help="mapping file (TOML): model + thinking per role")
+    p.add_argument("--label", help="name of this configuration (default: from the mapping)")
+    p.add_argument("--repeat", type=int, default=3, help="runs per configuration (default 3)")
+    p.add_argument("--corpus", default="bench/corpus", help="folder with packets + gold.json")
+    p.add_argument("--packets", nargs="*", help="packet names in order (default: order.txt)")
+    p.add_argument("--out", default="bench/results", help="results folder")
+    p.add_argument("--compare", nargs="+", metavar="DIR", help="compare finished result folders")
+    p.add_argument(
+        "--ask", nargs="+", metavar="DIR", help="ask the question set against finished results"
+    )
+    p.add_argument("--questions", help="question file (default: <corpus>/questions.md)")
+    p.add_argument("--query-model", help="model for --ask (default: MODEL_QUERY)")
+    p.add_argument("--json", action="store_true", help="machine-readable output")
+    p.set_defaults(func=cmd_bench)
     return parser
 
 
