@@ -4,12 +4,26 @@
 
 ## Setup
 
-```powershell
-pip install -e ".[dev]"
-pytest                 # deterministic tests, a fake LLM, no Ollama needed
+```bash
+bash ./init.sh         # venv, install, ruff, pytest, CLI smoke test: must be green
 pytest -m ollama       # opt-in: real runs against a local Ollama
-ruff check . ; ruff format --check .
 ```
+
+On Windows, run `init.sh` from Git Bash, not PowerShell. It needs no Ollama.
+
+## Workflow
+
+Work is tracked in GitHub issues; the full rules are in
+[AGENTS.md § 7](https://github.com/ThomasOrtner/mneme-wiki/blob/main/AGENTS.md#7-workflow).
+
+1. An issue (feature or bug template) is written together and labeled `ready` by the
+   owner; `p1`–`p4` set priority, `decision-needed` and `blocked` hold it.
+2. Work happens on `issue/<n>-<slug>` (or `chore/<topic>`), never on `main`.
+3. A PR starting with `Closes #<n>` carries the verification evidence; the owner
+   reviews and merges with a merge commit.
+4. Private documents (bench corpus, user vaults) never reach GitHub;
+   `scripts/gh_guard.py` blocks `gh` commands containing terms from the local
+   `.gh-denylist`.
 
 ## Code map
 

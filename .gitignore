@@ -33,3 +33,8 @@ examples/inbox/
 
 # Obsidian settings when docs/wiki is opened as a vault
 .obsidian/
+
+# Terms that must never reach GitHub (read by scripts/gh_guard.py; maintained by hand)
+.gh-denylist
+# Local Claude Code settings (.claude/settings.json is shared)
+.claude/settings.local.json

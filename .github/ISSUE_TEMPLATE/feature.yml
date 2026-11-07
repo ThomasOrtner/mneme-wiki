@@ -1,0 +1,36 @@
+name: Feature or change
+description: New behavior or a change to existing behavior
+body:
+  - type: markdown
+    attributes:
+      value: |
+        No private content here: no text, names or identifiers from the bench corpus
+        or private vaults. Use the fixture vaults and packets in `tests/fixtures`.
+        Work starts only once the `ready` label is set.
+  - type: textarea
+    id: behavior
+    attributes:
+      label: User-visible behavior
+      description: What the user (or an agent over MCP) can do or see afterwards, including commands and output.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: Concrete steps as a checklist, with expected results on fixtures where possible. Model-dependent steps name the model and say how many runs.
+      value: |
+        - [ ] `bash ./init.sh` is green
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: decisions
+    attributes:
+      label: Decisions
+      description: What was decided and why (becomes a TD row in AGENTS.md if it is a technical decision). Anything still open is marked DECISION NEEDED (and the issue gets the `decision-needed` label).
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Context, related issues, "blocked by #N", links to docs/plan.md or a milestone tutorial.

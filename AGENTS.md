@@ -1,9 +1,9 @@
 # mneme-wiki — AGENTS.md
 
 Stable rules for any coding agent (Claude Code, Codex, Cursor, …) in this repo.
-`CLAUDE.md` only points here. **Build order, detailed designs and progress are
-in [docs/plan.md](docs/plan.md).** If code and docs disagree, fix one of them in
-the same change.
+`CLAUDE.md` only points here. **Work is tracked in GitHub issues** (§ 7); the
+MVP plan and its detailed designs are in [docs/plan.md](docs/plan.md). If code
+and docs disagree, fix one of them in the same change.
 
 ## 1. What this is
 
@@ -174,23 +174,152 @@ callouts; links mostly in the prose.
   `docs/wiki/` (anything a user sees: commands, flags, config, formats) in the same
   commit as the change.
 
-**Working agreement**
-- All documents for planning and executing this project live in `docs/`.
-  The MVP plan is `docs/plan.md`.
-- Follow the milestone order in `docs/plan.md`; don't build deferred features
-  unprompted.
-- **Milestone tutorial:** every milestone gets `docs/milestones/M<n>-<name>.md`,
-  written for the user as a tutorial, not a changelog. It covers: what was built
-  and how the pieces fit together (walk through the code paths with
-  `file:line` references), how to run and try it yourself, every decision made
-  and *why* (including alternatives rejected), what was learned or measured,
-  and the known gaps. A reader should be able to understand the milestone
-  without reading the diff first. Render it (and `docs/plan.md`) to PDF next to the
-  `.md` (git-ignored):
+**Documents**
+- Design documents live in `docs/`: `docs/plan.md` (the MVP plan, M0–M7, done),
+  `docs/milestones/` (one tutorial per milestone), `docs/wiki/` (user docs).
+- **Tutorials for large features:** an issue that adds a stage, an operation or a
+  measured model decision gets a tutorial `docs/milestones/<n>-<name>.md` (`<n>`
+  = issue number) as part of its Definition of done, when the issue says so. It is
+  written for the user, not as a changelog: what was built and how the pieces fit
+  together (code paths with `file:line` references), how to run it, every decision
+  and *why* (including alternatives rejected), what was measured, the known gaps.
+  Render it to PDF next to the `.md` (git-ignored):
   `pandoc X.md -o X.pdf --pdf-engine=xelatex -V geometry:margin=2cm -V mainfont="Segoe UI" -V monofont="Consolas"`.
-- **One milestone at a time:** when a milestone's exit condition is met, tick
-  its boxes in `docs/plan.md`, write the milestone tutorial, make one commit (`feat: M<n> <name>` or
-  `docs: …`), report the result, and **wait for the user's confirmation**
-  before starting the next milestone.
-- When something is ambiguous or conflicts with reality, stop, ask, and propose
-  the doc edit.
+- The deferred features in `docs/plan.md` are draft issues; don't build them
+  unless their issue is `ready`.
+
+## 7. Workflow
+
+### Start of every session
+
+1. Run `git status` and `git log --oneline -5` in the repository root. If you are
+   on `main`, switch to the branch for your issue before changing anything.
+   Nothing is ever committed on `main`.
+2. If you are continuing an issue, read it with `gh issue view <n> --comments`:
+   the body is the spec, the comments say where the work stands. Otherwise list
+   candidates with `gh issue list --label ready`.
+3. Run `bash ./init.sh` (from Git Bash on Windows, not PowerShell). If it fails,
+   fixing the baseline is your task; don't start feature work on a red baseline.
+4. Pick the `ready` issue with the highest priority (`p1` before `p4`) that isn't
+   labeled `blocked` or `decision-needed`. Work only on that one.
+
+### Work is tracked in GitHub issues
+
+There is no tracking file in the repo. Every feature, behavior change and bug is
+a GitHub issue, written with the templates in `.github/ISSUE_TEMPLATE/`.
+
+**Labels.** `p1`–`p4` set priority (`p1` highest). `ready` means the issue text
+is stable and work may start; only the human sets it. `decision-needed` means a
+question in the issue is open. `blocked` means it waits on something else (say
+what in a comment, e.g. "blocked by #12"). `bug` marks a bug report.
+
+**Writing an issue.** The human and the agent write it together. The body holds
+the user-visible behavior, the verification steps as a checklist (expected
+results on fixtures where possible; model-dependent steps name the model and the
+number of runs), the decisions the human made, and anything still open marked
+`DECISION NEEDED` (plus the `decision-needed` label). Create it with
+`gh issue create`, and edit it with the human until they set `ready`. Never start
+implementing an issue that isn't `ready`.
+
+**Working on an issue.**
+1. Branch from `main` as `issue/<n>-<short-slug>`, or from the branch of an open
+   PR the issue builds on (see "Merging and stacked PRs").
+2. Treat the issue body as the spec. If the human changes it after work has
+   started, they say so in a comment; follow the comment.
+3. Comment on the issue at meaningful checkpoints and at the end of every
+   session: what is done, what was verified, what is next, and any new question.
+   Not a running narration.
+4. Tick the verification checklist in the issue body as steps pass.
+5. If a question comes up that the issue doesn't answer, comment it, add
+   `decision-needed`, and stop until it is answered.
+
+A request that comes up mid-session ("also make it do X") is a new issue: draft
+it with the human, commit the current branch's work, and wait for `ready` before
+starting it. Bug fixes get a `bug` issue too, and a regression test.
+
+### Private content stays off GitHub
+
+The bench corpus (`bench/corpus/`, git-ignored) and user vaults hold private
+documents. Never paste their text, names or identifiers into code, tests, docs,
+commit messages, issues, comments or PR descriptions; describe problems with
+fixture-style pages (`tests/fixtures/`). `scripts/gh_guard.py` enforces part of
+this: a `PreToolUse` hook (`.claude/settings.json`) blocks any `gh` command whose
+text or body file contains a term from `.gh-denylist` (gitignored, maintained by
+the human). Never read, print or edit `.gh-denylist`, and don't work around a
+block: rewrite the text. The hook only knows the listed terms, so the rule above
+still applies in full. Bench `summary.md` files in git hold numbers only.
+
+### Git workflow
+
+- Never commit to `main`. Changes reach `main` only through a pull request.
+- One branch per issue, named `issue/<n>-<short-slug>`. Harness, tooling or docs
+  changes without an issue go on `chore/<topic>`.
+- One line of work at a time. A new issue either branches from `main` (no PR
+  open) or is stacked on the open one. Don't start a parallel line unless the
+  human asks for it.
+- Commit on the branch as you go (conventional commits); unfinished work is fine
+  there as long as the latest issue comment says what state it is in.
+- When the issue is done (see "Definition of done"), push the branch and open a
+  PR with `gh pr create`. The description starts with `Closes #<n>` and covers
+  what changed and why, how it was verified (the `init.sh` result and the
+  evidence for every verification step: commands run plus the relevant output
+  lines, with a date), and any open questions or known risks. Then comment on the
+  issue with the PR link. Don't merge the PR yourself; the human reviews and
+  merges.
+
+**Merging and stacked PRs.** The repo merges PRs with merge commits only and
+deletes the head branch after a merge. That keeps commit hashes intact, which is
+what makes stacking safe:
+
+- Branch from `main` by default. When an issue depends on code in a PR that
+  isn't merged yet, branch from that PR's branch and open the PR with
+  `gh pr create --base <that branch>` (a stacked PR). Say so at the top of the
+  description, and name the PR it waits for.
+- The base PR is merged first. GitHub then deletes its branch and retargets the
+  stacked PR to `main` on its own. Never merge a stacked PR while its base is
+  still open: it would land in the base branch, not in `main`.
+- Before relying on the retarget, check the PR's base with
+  `gh pr view N --json baseRefName`. If the base branch still exists after its PR
+  merged, retarget with `gh pr edit N --base main`.
+- If an open PR conflicts with `main`, merge `main` into the branch
+  (`git fetch && git merge origin/main`) and resolve locally. If the resolution
+  isn't obvious, stop and ask the human.
+- Don't rebase or force-push a branch that has an open PR; the human may have
+  pushed to it. Rerun `./init.sh` after the merge and before pushing.
+
+### Stop and ask the human when
+
+- an issue has the `decision-needed` label or a `DECISION NEEDED` note
+- the issue you would work on isn't labeled `ready`
+- the change would break a business requirement or constraint (§ 2, § 3) or
+  overturn a technical decision (§ 4)
+- `docs/wiki/`, `AGENTS.md`, `docs/plan.md` and the code disagree about intended
+  behavior; propose the doc edit
+
+Don't guess on model choices: measure them with `mneme-wiki bench` and record the
+result as a `TD-n` row.
+
+### Definition of done
+
+An issue is done only when all of these hold:
+1. `./init.sh` passes (install, ruff, full pytest, end-to-end CLI smoke).
+2. Every step in the issue's verification checklist was run and ticked, and its
+   evidence (commands run plus the relevant output lines, with a date) is in the
+   PR description. Steps that need Ollama say which model ran them.
+3. User-visible changes (commands, flags, config, formats, MCP tools) are in
+   `docs/wiki/` and, if relevant, the README; new technical decisions are `TD-n`
+   rows in § 4; a tutorial exists if the issue asks for one.
+4. New commands get a smoke step in `init.sh`.
+
+"Tests pass" alone is not done. Unit tests that pass while the CLI path is broken
+don't count.
+
+### End of every session
+
+1. Run `./init.sh` one last time; it must be green, or the breakage is recorded
+   as a blocker in the issue comment.
+2. Commit to the issue branch with a descriptive message. Leave nothing half-done
+   that the issue comment doesn't mention.
+3. Comment on the issue: what was done, what was verified, what is next, open
+   questions. No optimistic claims; the comment must match reality.
+4. If the issue is done, push and open the PR (see Git workflow).

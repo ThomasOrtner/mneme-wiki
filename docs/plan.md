@@ -1,5 +1,9 @@
 # mneme-wiki: MVP plan
 
+> **Done (M0–M7).** Work after the MVP is tracked in GitHub issues; see
+> [AGENTS.md § 7](../AGENTS.md#7-workflow). This file stays as the record of the
+> MVP's build order and designs.
+
 The implementation plan for the MVP. [AGENTS.md](../AGENTS.md) holds the
 stable rules (requirements, constraints, decisions, coding standards). This
 file holds the build order, the detailed designs, and progress. Tick off the
@@ -363,6 +367,8 @@ mneme-wiki status [--json]
 | Structured-output reliability varies by model | Validate + retry; record validity per model in the bench |
 
 ## Deferred (not MVP)
+
+Each of these becomes a GitHub issue before work starts (AGENTS.md § 7).
 
 OpenRouter / remote backends (opt-in, for benchmarking against stronger
 models and hybrid vault profiles), embedding search, LLM lint (contradictions,
