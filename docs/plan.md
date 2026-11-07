@@ -22,7 +22,8 @@ default, with a benchmark that shows how each stage performs per local model.
 - [x] Each integration is one reviewable git commit in the vault, with a
       `log.md` entry.
 - [x] `mneme-wiki query --file` answers with citations and saves a synthesis page.
-- [ ] All of the above is available as MCP tools.
+- [x] All of the above is available as MCP tools (tested over stdio with the MCP
+      client, not yet from a Claude Code session).
 - [x] A bench run compares qwen3:14b with at least 2 other local models on the
       fixture corpus.
 
@@ -187,9 +188,13 @@ per vault at no measurable cost. See [M5 tutorial](milestones/M5-query.md).
 
 ### M6: MCP server
 
-- [ ] `mcp_server.py` (stdio, logs only to stderr): `status`, `search`,
+- [x] `mcp_server.py` (stdio, logs only to stderr): `status`, `search`,
       `read_page`, `lint`, `query`, `integrate` (background job + `job_status`).
-- [ ] No delete/rename tools in the MVP.
+- [x] No delete/rename tools in the MVP.
+
+**Result (2026-11-07):** done. Seven tools; `integrate` runs as a background job, one
+worker at a time. A real stdio round trip is tested. See
+[M6 tutorial](milestones/M6-mcp-server.md).
 
 ### M7: mneme exporter (in the mneme repo, separate change)
 
@@ -311,6 +316,7 @@ complete(messages, *, schema=None, thinking=False) -> Result
 | `bench.py` | Benchmark harness |
 | `cli.py` | CLI (thin) |
 | `mcp_server.py` | MCP tools |
+| `jobs.py` | In-memory, single-worker job queue for `integrate` |
 
 ### CLI surface
 

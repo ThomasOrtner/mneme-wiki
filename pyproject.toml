@@ -22,7 +22,8 @@ dev = ["pytest>=8", "ruff>=0.6"]
 
 [project.scripts]
 mneme-wiki = "mneme_wiki.cli:main"
-# mneme-wiki-mcp = "mneme_wiki.mcp_server:main"   # M6
+# MCP server (stdio): claude mcp add mneme-wiki -- mneme-wiki-mcp
+mneme-wiki-mcp = "mneme_wiki.mcp_server:main"
 
 [tool.setuptools.packages.find]
 include = ["mneme_wiki*"]
