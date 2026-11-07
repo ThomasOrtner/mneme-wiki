@@ -1,2 +1,4 @@
 # Fixture vaults are byte-exact test data (CRLF, BOM, ...): never convert them.
 tests/fixtures/** -text
+# Shell scripts run in bash (Git Bash on Windows): always LF.
+*.sh text eol=lf
