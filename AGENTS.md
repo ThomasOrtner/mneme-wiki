@@ -170,7 +170,8 @@ callouts; links mostly in the prose.
 
 **Git & docs**
 - Conventional commits (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`).
-- Update this file (rules) or `docs/` (plans, designs, progress) in the same
+- Update this file (rules), `docs/` (plans, designs, progress) or the user docs in
+  `docs/wiki/` (anything a user sees: commands, flags, config, formats) in the same
   commit as the change.
 
 **Working agreement**
