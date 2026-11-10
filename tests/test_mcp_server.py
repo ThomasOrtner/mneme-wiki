@@ -125,3 +125,21 @@ def test_stdio_round_trip(tmp_path: Path, git_identity) -> None:  # noqa: F811
 
     data = asyncio.run(main())
     assert Path(data["vault"]) == root.resolve() and data["pages"] == {"index": 1, "log": 1}
+
+
+def test_documented_registration_avoids_the_locked_exe() -> None:
+    # Issue #11: on Windows a running mneme-wiki-mcp.exe is locked, so `pip install -e .`
+    # fails halfway and leaves the venv without mneme_wiki. Every documented
+    # registration must start the server through Python (`-m mneme_wiki.mcp_server`).
+    repo = Path(__file__).resolve().parent.parent
+    docs = [*sorted((repo / "docs" / "wiki").glob("*.md")), repo / "mneme_wiki" / "mcp_server.py"]
+    commands = [
+        line.strip()
+        for doc in docs
+        for line in doc.read_text(encoding="utf-8").splitlines()
+        if "claude mcp add mneme-wiki" in line
+    ]
+    assert commands, "no documented registration found"
+    for cmd in commands:
+        server = cmd.split(" -- ", 1)[1]
+        assert server.endswith("-m mneme_wiki.mcp_server"), cmd

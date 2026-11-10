@@ -42,5 +42,17 @@ mneme-wiki switches pipes to UTF-8 itself; if another tool in the pipe mangles t
 `$env:PYTHONIOENCODING = "utf-8"`.
 
 **MCP client sees no tools / the server exits**
-Run `mneme-wiki-mcp` in a terminal to see errors on stderr. Make sure the client starts
-the venv's executable and passes `WIKI_VAULT_DIR`.
+Run `python -m mneme_wiki.mcp_server` (in the venv) in a terminal to see errors on stderr.
+Make sure the client starts the venv's Python and passes `WIKI_VAULT_DIR`.
+
+**`pip install` / `init.sh` fails with `WinError 32` on `mneme-wiki-mcp.exe`**
+An MCP client is running the server from `mneme-wiki-mcp.exe`, and Windows locks a
+running `.exe`. pip has then already removed the old install: `pip show mneme-wiki`
+finds nothing and warns about an invalid distribution `~neme-wiki`. To recover:
+
+1. Stop the server in **every** client session (Claude Code: `/mcp` → disable). Each
+   session runs its own server.
+2. Run `pip install -e ".[dev]"` in the venv.
+3. Delete the leftover `.venv\Lib\site-packages\~neme_wiki-*.dist-info` folder.
+4. Re-register the server with `python -m mneme_wiki.mcp_server` (see
+   [MCP Server](MCP-Server.md)) so it doesn't happen again, then re-enable it.
