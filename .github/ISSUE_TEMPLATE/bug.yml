@@ -1,0 +1,32 @@
+name: Bug
+description: Existing behavior is wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        No private content here. Describe the problem with fixture-style pages and
+        packets; affected private pages are looked at locally, never pasted into GitHub.
+  - type: textarea
+    id: observed
+    attributes:
+      label: What happens
+      description: Command run (or MCP tool call) and what it printed, with fixture-style values. Model and version if a model was involved.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should happen
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: How the fix is shown to work, as a checklist. Includes a regression test.
+      value: |
+        - [ ] `bash ./init.sh` is green
+        - [ ] regression test fails before the fix and passes after
+    validations:
+      required: true
