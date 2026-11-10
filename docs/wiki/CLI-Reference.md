@@ -87,4 +87,5 @@ See [Benchmark](Benchmark.md).
 
 ## mneme-wiki-mcp
 
-The MCP server is a separate command; see [MCP Server](MCP-Server.md).
+The MCP server is a separate command, also runnable as `python -m mneme_wiki.mcp_server`
+(the recommended way to register it); see [MCP Server](MCP-Server.md).

@@ -7,12 +7,26 @@ over stdio. One server serves one vault: `WIKI_VAULT_DIR`.
 
 ## Register with Claude Code
 
+Start the server through the venv's Python:
+
 ```powershell
-claude mcp add mneme-wiki -e WIKI_VAULT_DIR=D:\wikis\space-ops -- mneme-wiki-mcp
+claude mcp add mneme-wiki -e WIKI_VAULT_DIR=D:\wikis\space-ops -- C:\path\to\mneme-wiki\.venv\Scripts\python.exe -m mneme_wiki.mcp_server
 ```
 
-If `mneme-wiki-mcp` isn't on the client's `PATH`, give the full path inside the venv
-(`.venv\Scripts\mneme-wiki-mcp.exe`).
+On Linux/macOS the interpreter is `.venv/bin/python`.
+
+**Why not `mneme-wiki-mcp`?** The `mneme-wiki-mcp` command works too, but on Windows a
+running `.exe` is locked: while any client runs the server from `mneme-wiki-mcp.exe`,
+`pip install -e .` (and so `init.sh`) can't replace that file, fails halfway and leaves
+the venv without `mneme_wiki`. pip never rewrites `python.exe` on an editable install,
+so `python -m` avoids the lock. Every open client session starts its own server.
+
+To switch an existing registration:
+
+```powershell
+claude mcp remove mneme-wiki -s user
+claude mcp add mneme-wiki -s user -e WIKI_VAULT_DIR=... -- C:\path\to\mneme-wiki\.venv\Scripts\python.exe -m mneme_wiki.mcp_server
+```
 
 ## Tools
 

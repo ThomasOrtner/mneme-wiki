@@ -1,8 +1,11 @@
 """MCP server for mneme-wiki: an agent can read, search, lint, query and integrate.
 
-Run as `mneme-wiki-mcp` (stdio). Register with Claude Code:
+Run over stdio. Register with Claude Code through the venv's Python:
 
-    claude mcp add mneme-wiki -- mneme-wiki-mcp
+    claude mcp add mneme-wiki -- <venv>/Scripts/python.exe -m mneme_wiki.mcp_server
+
+`mneme-wiki-mcp` works too, but on Windows the running .exe is locked and breaks
+`pip install -e .` (see docs/wiki/Troubleshooting.md).
 
 The vault is `WIKI_VAULT_DIR` (one vault per server). The MCP protocol runs over
 stdout, so nothing here prints; logs go to stderr (TD-10). `integrate` runs as a

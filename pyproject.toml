@@ -22,7 +22,8 @@ dev = ["pytest>=8", "ruff>=0.6"]
 
 [project.scripts]
 mneme-wiki = "mneme_wiki.cli:main"
-# MCP server (stdio): claude mcp add mneme-wiki -- mneme-wiki-mcp
+# MCP server (stdio). Register via the venv's Python, not this exe (Windows locks a running
+# .exe, which breaks pip install -e .): claude mcp add mneme-wiki -- <venv python> -m mneme_wiki.mcp_server
 mneme-wiki-mcp = "mneme_wiki.mcp_server:main"
 
 [tool.setuptools.packages.find]
