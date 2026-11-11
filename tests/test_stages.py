@@ -59,11 +59,22 @@ def test_parse_subjects_validates_and_clips() -> None:
 
 def test_merge_within_source() -> None:
     a = subj("Target Keeper", "TK", claims=["One."])
-    b = subj("TK", claims=["Two.", "One."])
+    b = subj("Target Keepers", "Keeper", claims=["Two.", "One."])
     c = subj("Target", claims=["Three."])
     merged = extract.merge_within_source([a, b, c])
     assert [m.name for m in merged] == ["Target Keeper", "Target"]
     assert [x.text for x in merged[0].claims] == ["One.", "Two."]
+    assert merged[0].aliases == ["TK", "Keeper"]  # "Target Keepers" is the name itself
+
+
+def test_merge_within_source_never_unions_through_an_alias() -> None:
+    # #15: a related name listed as an alias must not fold two subjects without a check
+    mission = subj("Probe Alpha", "PA", "Rover A", claims=["Mission."])
+    rover = subj("Rover A", claims=["Rover."])
+    tk = subj("TK", claims=["Two."])
+    keeper = subj("Target Keeper", "TK", claims=["One."])
+    merged = extract.merge_within_source([mission, rover, tk, keeper])
+    assert [m.name for m in merged] == ["Probe Alpha", "Rover A", "TK", "Target Keeper"]
 
 
 def test_known_for_chunk_prefers_mentioned_pages() -> None:
@@ -103,6 +114,60 @@ def test_resolve_exact_pairwise_and_in_source() -> None:
     assert (check.candidate, check.same, check.via) == ("Target", False, "shape")
     assert counters["resolve_exact_within_source"] == 1 and counters["resolve_llm"] == 1
     assert all(r["thinking"] for r in backend.requests)  # resolve always thinks
+
+
+def test_resolve_alias_match_is_checked_not_exact() -> None:
+    # #15: the subject's alias "Cam B" names an existing page; that is no exact match
+    pages = [page("entities/cam-b.md", "Cam B", desc="A camera of another mission.",
+                  type_="entity")]  # fmt: skip
+    llm, backend = fake_llm(Toy())  # the model says "different"
+    mission = subj("Probe Alpha", "PA", "Rover A", "Cam A", "Cam B", kind="entity")
+    counters: dict[str, int] = {}
+    resolved, decisions = resolve.resolve(llm, [mission], pages, counters=counters)
+    assert [(r.subject.name, r.target, r.how) for r in resolved] == [("Probe Alpha", None, "new")]
+    assert decisions[0].how == "new" and decisions[0].checks[0].candidate == "Cam B"
+    assert decisions[0].checks[0].via == "alias"
+    assert len(backend.requests) == 1  # one yes/no question, then "new"
+    # the alias that is another page's title is dropped and counted
+    assert resolved[0].subject.aliases == ["PA", "Rover A", "Cam A"]
+    assert counters["alias_conflict_dropped"] == 1
+
+
+def test_resolve_alias_match_merges_when_the_model_says_same() -> None:
+    pages = [page("entities/rocc.md", "Rover Operations Control Centre", "ROCC", type_="entity")]
+    llm, _ = fake_llm(Toy(same=[("Ops Centre", "Rover Operations Control Centre")]))
+    resolved, decisions = resolve.resolve(llm, [subj("Ops Centre", "ROCC")], pages)
+    assert [(r.target, r.how) for r in resolved] == [("entities/rocc.md", "llm")]
+    assert decisions[0].checks[0].via == "alias"
+    assert resolved[0].subject.aliases == ["ROCC"]  # its own page's alias is kept
+
+
+def test_resolve_within_source_alias_is_checked_not_folded() -> None:
+    # #15: a subject whose alias is another subject's name is not folded without a check
+    llm, backend = fake_llm(Toy())
+    mission = subj("Probe Alpha", "Rover A", kind="entity", claims=["Mission."])
+    rover = subj("Rover A", kind="entity", claims=["Rover."])
+    counters: dict[str, int] = {}
+    resolved, decisions = resolve.resolve(llm, [mission, rover], [], counters=counters)
+    assert [(r.subject.name, r.target, r.how) for r in resolved] == [
+        ("Probe Alpha", None, "new"),
+        ("Rover A", None, "new"),
+    ]
+    assert decisions[1].checks[0].candidate == "Probe Alpha"
+    assert decisions[1].checks[0].via == "alias"
+    # the mission's alias is now another new page's name: dropped
+    assert resolved[0].subject.aliases == []
+    assert counters["alias_conflict_dropped"] == 1
+
+
+def test_resolve_within_source_alias_folds_when_the_model_says_same() -> None:
+    llm, _ = fake_llm(Toy(same=[("ROCC", "Rover Operations Control Centre")]))
+    full = subj("Rover Operations Control Centre", "ROCC", kind="entity", claims=["A."])
+    short = subj("ROCC", kind="entity", claims=["B."])
+    resolved, decisions = resolve.resolve(llm, [full, short], [])
+    assert len(resolved) == 1 and [c.text for c in resolved[0].subject.claims] == ["A.", "B."]
+    assert decisions[1].how == "llm"
+    assert decisions[1].target == "this source: Rover Operations Control Centre"
 
 
 def test_resolve_caps_candidates() -> None:

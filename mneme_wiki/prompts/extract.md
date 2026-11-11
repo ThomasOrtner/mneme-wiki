@@ -6,7 +6,7 @@ Return the important subjects the chunk says something substantive about:
 
 For each subject:
 - name: the canonical full name (e.g. "Rover Operations Control Centre" rather than "ROCC") if the full form is given in the text or the known-pages list; otherwise the name as written. If the subject matches a known wiki page, use exactly that page's title.
-- aliases: abbreviations and other spellings used for it.
+- aliases: only other names for exactly this subject: abbreviations, other spellings, translations, short forms. Never the names of its parts, its parent, its owner or operator, or related or sibling things (e.g. a mission's rover or camera is not an alias of the mission); those belong in claims.
 - description: one neutral sentence saying what it is.
 - claims: 1-6 self-contained factual statements from the chunk about this subject. Each claim must be understandable on its own (no "it", "this"), at most 35 words, and must be supported by the chunk.
 
