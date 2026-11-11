@@ -58,6 +58,22 @@ Extra fields by type:
 | `synthesis` | `question` (required) |
 | any | `contradicts: ["[[page]]"]` |
 
+### `status`
+
+`status` is a label for readers. It is **not a review gate**: integrate, search, query,
+the index and MCP don't act on it, and lint only checks that the value is one of the four.
+
+| Value | Meaning | Who sets it |
+|---|---|---|
+| `stub` | Thin page, few claims | `integrate`, when it creates an entity/concept page from ≤ 2 claims |
+| `active` | Normal page | `integrate` for larger new pages, source pages and filed query answers |
+| `contested` | Holds a marked contradiction | You, when you add a `> [!warning] Contradiction` callout (not detected automatically yet) |
+| `stale` | Outdated | You (planned for a later LLM lint) |
+
+Integrate sets `status` only when it **creates** a page and never changes it afterwards,
+so a page that started as a `stub` stays one even after later sources add to it
+(tracked in [#19](https://github.com/ThomasOrtner/mneme-wiki/issues/19)).
+
 Unknown keys are kept. A file whose front matter didn't change stays **byte-identical**
 (key order, comments, line endings, BOM), so diffs only show real edits.
 
