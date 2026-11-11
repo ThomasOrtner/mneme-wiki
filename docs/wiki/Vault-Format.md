@@ -74,6 +74,39 @@ Integrate sets `status` only when it **creates** a page and never changes it aft
 so a page that started as a `stub` stays one even after later sources add to it
 (tracked in [#19](https://github.com/ThomasOrtner/mneme-wiki/issues/19)).
 
+### `entity_kind`
+
+Every `entity` page needs an `entity_kind`. Concept pages don't have one. An entity is
+one specific, named thing that exists once; a concept is a type, process or term that
+can have many instances.
+
+`integrate` uses a fixed list:
+
+`person` · `organisation` · `team` · `role` · `project` · `mission` · `system` ·
+`software` · `instrument` · `place` · `document` · `other`
+
+- **Set by the extract model,** limited to this list by the JSON schema; anything else
+  becomes `other`. When a source mentions a subject several times, a specific kind wins
+  over `other`.
+- **Written only when the page is created.** Later sources don't change it; correct it by
+  hand if it's wrong.
+- **Nothing acts on it yet.** Resolve, search, query, the index and `status` ignore it.
+  Lint only checks that the field exists, so a kind you add by hand (e.g.
+  `entity_kind: spacecraft`) is accepted.
+
+There is no CLI command or MCP tool that lists pages by kind yet
+([#20](https://github.com/ThomasOrtner/mneme-wiki/issues/20)). In Obsidian, the
+[Dataview](https://github.com/blacksmithgu/obsidian-dataview) plugin gives you the
+overview:
+
+````markdown
+```dataview
+TABLE rows.file.link AS Pages, length(rows) AS Count
+FROM "entities"
+GROUP BY entity_kind
+```
+````
+
 Unknown keys are kept. A file whose front matter didn't change stays **byte-identical**
 (key order, comments, line endings, BOM), so diffs only show real edits.
 
