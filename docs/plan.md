@@ -26,7 +26,7 @@ How agents use this file: [AGENTS.md § 7](../AGENTS.md#7-workflow).
 |---|---|---|---|
 | 0 | Docs that explain what the pipeline does | PR #18 | – |
 | 1 | Stop wrong merges at the source | #15, #13, #22 | p1 |
-| 2 | Vault-specific knowledge | #14, #16 | p2 |
+| 2 | Vault-specific knowledge | #24, #14, #16 | p2 |
 | 3 | Keep pages up to date, see the vault | #20, #23, #19, #17 | p3 |
 | 4 | Repair what is already in a vault | #6, #3 | p4 |
 | Later | Independent infrastructure | #5, #10, #7, #9, #4, #2 | p4 |
@@ -57,6 +57,15 @@ the current baseline.
 
 ## Phase 2: vault-specific knowledge
 
+Phase 1 stops wrong merges; this phase lets a vault tell the pipeline what it already
+knows, so that names which mean one thing end up on one page.
+
+- [ ] **#24** glossary: a curated list of abbreviations and full names that code reads
+      (resolve exact match, aliases, the abbreviation check, the preferred form in
+      links). It is the structured part of #14, taken out because it is deterministic,
+      needs no prompt rules and helps most in acronym-heavy vaults. It goes first: #14
+      and #16 can build on its file and parser. It builds on #15 (curated aliases are
+      trusted, model aliases are checked).
 - [ ] **#14** domain rules: a `## Domain rules` section in `WIKI.md` that extract and
       resolve read. Simplest home for the vault-specific local-id patterns of #13.
 - [ ] **#16** ontology, first version = kinds + scoped kinds. Takes over #13 option 2
