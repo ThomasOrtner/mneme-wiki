@@ -1,8 +1,9 @@
 # mneme-wiki — AGENTS.md
 
 Stable rules for any coding agent (Claude Code, Codex, Cursor, …) in this repo.
-`CLAUDE.md` only points here. **Work is tracked in GitHub issues** (§ 7); the
-MVP plan and its detailed designs are in [docs/plan.md](docs/plan.md). If code
+`CLAUDE.md` only points here. **Work is tracked in GitHub issues** (§ 7), in the
+order set by [docs/plan.md](docs/plan.md). The MVP plan and its detailed designs
+are archived in [docs/archive/mvp-plan.md](docs/archive/mvp-plan.md). If code
 and docs disagree, fix one of them in the same change.
 
 ## 1. What this is
@@ -175,8 +176,9 @@ callouts; links mostly in the prose.
   commit as the change.
 
 **Documents**
-- Design documents live in `docs/`: `docs/plan.md` (the MVP plan, M0–M7, done),
-  `docs/milestones/` (one tutorial per milestone), `docs/wiki/` (user docs).
+- Design documents live in `docs/`: `docs/plan.md` (the order of open issues),
+  `docs/archive/mvp-plan.md` (the MVP plan, M0–M7, done), `docs/milestones/` (one
+  tutorial per milestone), `docs/wiki/` (user docs).
 - **Tutorials for large features:** an issue that adds a stage, an operation or a
   measured model decision gets a tutorial `docs/milestones/<n>-<name>.md` (`<n>`
   = issue number) as part of its Definition of done, when the issue says so. It is
@@ -185,7 +187,7 @@ callouts; links mostly in the prose.
   and *why* (including alternatives rejected), what was measured, the known gaps.
   Render it to PDF next to the `.md` (git-ignored):
   `pandoc X.md -o X.pdf --pdf-engine=xelatex -V geometry:margin=2cm -V mainfont="Segoe UI" -V monofont="Consolas"`.
-- The deferred features in `docs/plan.md` are draft issues; don't build them
+- The deferred features of the MVP plan are draft issues; don't build them
   unless their issue is `ready`.
 
 ## 7. Workflow
@@ -196,19 +198,25 @@ callouts; links mostly in the prose.
    on `main`, switch to the branch for your issue before changing anything.
    Nothing is ever committed on `main`.
 2. If you are continuing an issue, read it with `gh issue view <n> --comments`:
-   the body is the spec, the comments say where the work stands. Otherwise list
-   candidates with `gh issue list --label ready`.
+   the body is the spec, the comments say where the work stands. Otherwise read
+   [docs/plan.md](docs/plan.md) first, then the issues of its current phase.
 3. Run `bash ./init.sh` (from Git Bash on Windows, not PowerShell). If it fails,
    fixing the baseline is your task; don't start feature work on a red baseline.
-4. Pick the `ready` issue with the highest priority (`p1` before `p4`) that isn't
-   labeled `blocked` or `decision-needed`. Work only on that one.
+4. Pick the next issue **in plan order**: the first issue of the current phase that
+   is `ready` and not labeled `blocked` or `decision-needed`. If none can be started,
+   stop and ask; don't jump to a later phase. Work only on that one.
 
 ### Work is tracked in GitHub issues
 
-There is no tracking file in the repo. Every feature, behavior change and bug is
-a GitHub issue, written with the templates in `.github/ISSUE_TEMPLATE/`.
+Every feature, behavior change and bug is a GitHub issue, written with the
+templates in `.github/ISSUE_TEMPLATE/`. The issues hold the specs and their state;
+`docs/plan.md` holds only the order (phases) and why. A new issue gets its place in
+the plan when it is created.
 
-**Labels.** `p1`–`p4` set priority (`p1` highest). `ready` means the issue text
+**Labels.** `p1`–`p4` set priority (`p1` highest) and **follow the plan**: current
+phase `p1`, next `p2`, the one after `p3`, everything later `p4`. The agent may set
+and update them, in the same change that edits the plan; if labels and plan
+disagree, the plan wins. `ready` means the issue text
 is stable and work may start; only the human sets it. `decision-needed` means a
 question in the issue is open. `blocked` means it waits on something else (say
 what in a comment, e.g. "blocked by #12"). `bug` marks a bug report.
@@ -293,6 +301,7 @@ what makes stacking safe:
 - the issue you would work on isn't labeled `ready`
 - the change would break a business requirement or constraint (§ 2, § 3) or
   overturn a technical decision (§ 4)
+- the plan's current phase has no issue that can be started
 - `docs/wiki/`, `AGENTS.md`, `docs/plan.md` and the code disagree about intended
   behavior; propose the doc edit
 

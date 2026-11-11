@@ -74,7 +74,8 @@ The full list, with the reasoning behind each choice, is the TD table in
 ## Docs
 
 - `AGENTS.md`: stable rules (requirements, constraints, decisions, standards).
-- `docs/plan.md`: MVP plan, designs, progress.
+- `docs/plan.md`: the order in which open issues are worked on.
+- `docs/archive/mvp-plan.md`: the MVP plan (M0–M7, done) and its designs.
 - `docs/milestones/M<n>-*.md`: one tutorial per milestone, with `file:line` walkthroughs.
 - `docs/wiki/`: this user documentation. Update it in the same commit as a user-visible change.
 
