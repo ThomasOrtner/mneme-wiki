@@ -31,6 +31,9 @@ Links are Obsidian wikilinks to the slug path, optionally with an alias or headi
 [[concepts/activity-plan#Inputs]]
 ```
 
+How `integrate` decides which links a page gets: [Integration Pipeline → How pages get
+linked](Integration-Pipeline.md#how-pages-get-linked).
+
 ## Front matter
 
 ```yaml
