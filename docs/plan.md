@@ -41,7 +41,7 @@ Every integration with a wrong merge or an invented name creates work for a late
 or rename (phase 4), so this goes first. #15 and #13 share one root cause: resolve's exact name/alias match
 (`stages/resolve.py`) skips the "same thing?" question. They share code and a bench run.
 
-- [ ] **#15** (bug): an exact match only on the subject's *name*; a match through an
+- [x] **#15** (bug): an exact match only on the subject's *name*; a match through an
       alias goes to the yes/no check. Extract prompt: aliases are other names for the
       same thing only. Drop aliases that are another page's name. The kind guard (its
       fix 2) moves to #16.
