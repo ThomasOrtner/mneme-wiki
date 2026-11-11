@@ -25,7 +25,7 @@ How agents use this file: [AGENTS.md § 7](../AGENTS.md#7-workflow).
 | Phase | Goal | Issues | Priority |
 |---|---|---|---|
 | 0 | Docs that explain what the pipeline does | PR #18 | – |
-| 1 | Stop wrong merges at the source | #15, #13, #22 | p1 |
+| 1 | Stop wrong merges and invented content at the source | #15, #13, #22, #25 | p1 |
 | 2 | Vault-specific knowledge | #24, #14, #16 | p2 |
 | 3 | Keep pages up to date, see the vault | #20, #23, #19, #17 | p3 |
 | 4 | Repair what is already in a vault | #6, #3 | p4 |
@@ -35,10 +35,10 @@ How agents use this file: [AGENTS.md § 7](../AGENTS.md#7-workflow).
 
 - [ ] PR #18: how pages get linked, what `status` and `entity_kind` mean.
 
-## Phase 1: stop wrong merges at the source
+## Phase 1: stop wrong merges and invented content at the source
 
-Every integration with a wrong merge creates work for a later split (phase 4), so this
-goes first. #15 and #13 share one root cause: resolve's exact name/alias match
+Every integration with a wrong merge or an invented name creates work for a later split
+or rename (phase 4), so this goes first. #15 and #13 share one root cause: resolve's exact name/alias match
 (`stages/resolve.py`) skips the "same thing?" question. They share code and a bench run.
 
 - [ ] **#15** (bug): an exact match only on the subject's *name*; a match through an
@@ -51,6 +51,10 @@ goes first. #15 and #13 share one root cause: resolve's exact name/alias match
 - [ ] **#22** (bug, from #13's notes): a `replace` can keep a claim's
       citation but change its fact to another source's. Validation (L-4) checks that
       links and citations survive, not that a cited fact still says the same thing.
+- [ ] **#25** (bug): extract can invent a page title (glued acronym + made-up
+      expansion), and new titles and aliases are never checked against the source. Closes
+      TD-29's "page titles aren't checked" gap. Independent of #15/#13 in code, but its
+      bench check can share their run.
 
 Bench after #15 + #13 together: resolve wrong merges stay 0, coverage not lower than
 the current baseline.
