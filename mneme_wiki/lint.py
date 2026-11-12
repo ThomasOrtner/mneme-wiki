@@ -14,8 +14,9 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass
 
 from . import frontmatter as fm
-from . import links, text
-from .vault import Page, Vault
+from . import glossary, links, text
+from .stages.common import name_key
+from .vault import GLOSSARY_FILE, Page, Vault
 
 ERROR, WARNING = "error", "warning"
 CLAIM_MIN_WORDS = 8
@@ -29,6 +30,9 @@ CHECKS = {
     "broken-link": ERROR,
     "duplicate-name": ERROR,
     "case-collision": ERROR,
+    "glossary-format": WARNING,
+    "glossary-conflict": WARNING,
+    "glossary-kind": WARNING,
     "ambiguous-link": WARNING,
     "missing-heading": WARNING,
     "orphan": WARNING,
@@ -161,11 +165,66 @@ def lint(vault: Vault) -> Report:
                 others = ", ".join(p for p in sorted(paths) if p != rel)
                 add(rel, 1, "duplicate-name", f"title/alias {name!r} also used by {others}")
 
+    _lint_glossary(vault, pages, add)
+
     for rel, page in pages.items():
         if page.meta.get("type") in ORPHAN_TYPES and not inbound.get(rel):
             add(rel, 1, "orphan", "no other page links here")
 
     return Report(sorted(findings), len(pages))
+
+
+def _lint_glossary(vault: Vault, pages: dict[str, Page], add) -> None:
+    """#24: problems in `glossary.md`, pages the glossary says are one thing, names that
+    a page carries but the glossary gives to something else, and kind mismatches (D3)."""
+    gl = glossary.load(vault)
+    for problem in gl.problems:
+        add(GLOSSARY_FILE, problem.line, problem.check, problem.message)
+    by_key: dict[str, set[str]] = defaultdict(set)
+    for rel, page in pages.items():
+        if page.meta.get("type") not in ("entity", "concept"):
+            continue
+        aliases = page.meta.get("aliases") if isinstance(page.meta.get("aliases"), list) else []
+        for n in [page.title, *(a for a in aliases if isinstance(a, str))]:
+            by_key[name_key(n)].add(rel)
+    for t in gl.terms:
+        keys = {name_key(n) for n in t.names()}
+        matched = sorted(set().union(*(by_key.get(k, set()) for k in keys)))
+        if len(matched) > 1:
+            for rel in matched:
+                others = ", ".join(p for p in matched if p != rel)
+                add(
+                    rel,
+                    1,
+                    "duplicate-name",
+                    f"the glossary (line {t.line}) says {t.title!r} is one thing; also {others}",
+                )
+            continue
+        if not matched:
+            continue
+        page = pages[matched[0]]
+        if name_key(page.title) not in keys:
+            add(
+                GLOSSARY_FILE,
+                t.line,
+                "glossary-conflict",
+                f"{t.title!r}: {matched[0]} carries one of its names, but its title "
+                f"{page.title!r} isn't in this row",
+            )
+            continue
+        kind, entity_kind = page.meta.get("type"), page.meta.get("entity_kind")
+        if t.kind and (
+            kind != t.kind
+            or (t.kind == "entity" and t.entity_kind != "other" and entity_kind != t.entity_kind)
+        ):
+            want = t.entity_kind if t.kind == "entity" else t.kind
+            add(
+                matched[0],
+                1,
+                "glossary-kind",
+                f"the glossary (line {t.line}) says {want}, the page is "
+                f"{entity_kind if kind == 'entity' else kind}",
+            )
 
 
 def _cites_source(markdown: str, index: links.LinkIndex) -> bool:

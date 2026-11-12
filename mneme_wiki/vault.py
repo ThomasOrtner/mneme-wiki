@@ -38,6 +38,7 @@ FOLDERS = {
 }
 VAULT_DIRS = (*FOLDERS.values(), "attachments")
 SCHEMA_FILE = "WIKI.md"  # instructions for the maintainer, not a wiki page
+GLOSSARY_FILE = "glossary.md"  # curated names (#24): read by code, not a wiki page
 SKIP_DIRS = {"attachments"}  # plus every folder whose name starts with "."
 
 _RESERVED = {"con", "prn", "aux", "nul"} | {f"{p}{i}" for p in ("com", "lpt") for i in range(10)}
@@ -193,12 +194,12 @@ class Vault:
         return out
 
     def page_paths(self) -> list[str]:
-        """Every Markdown page (WIKI.md and attachments excluded)."""
+        """Every Markdown page (WIKI.md, glossary.md and attachments excluded)."""
         return [
             p
             for p in self.files()
             if p.lower().endswith(".md")
-            and p != SCHEMA_FILE
+            and p not in (SCHEMA_FILE, GLOSSARY_FILE)
             and PurePosixPath(p).parts[0] not in SKIP_DIRS
         ]
 
