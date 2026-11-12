@@ -7,9 +7,13 @@ file, and code checks every piece:
 - links must resolve to a page that exists (or is planned in this run); others
   are turned back into plain text;
 - every fact line cites a source; a missing citation is added and counted;
+- `replace` may only rewrite lines that cite the source being integrated: every
+  other line (citing another source, or nothing: human text) must come back with
+  the same text (`_line_key`) and citations (#22);
 - `replace` may not drop a link or citation of the section, nor shrink it below
   60 %; otherwise the op is rejected (the old section stays);
-- a new lead that loses a link of the old lead is discarded;
+- a new lead that loses a link of the old lead is discarded; one that rewrites a
+  lead backed by another source (or none) is rejected, only extending it is allowed;
 - escaped `\\n` inside strings is repaired, echoed headings are dropped, lines the
   page already has are not added twice;
 - finally the whole page: every link target of the old body must still be there,
@@ -174,11 +178,26 @@ def fix_links(markdown: str, ctx: Context, counters: dict[str, int]) -> str:
 
 
 def _cites(line: str, ctx: Context) -> bool:
-    for link in links.extract(line):
+    return bool(cited_sources(line, ctx))
+
+
+def cited_sources(markdown: str, ctx: Context) -> set[str]:
+    """The source pages `markdown` links to, as "sources/x" (no .md)."""
+    out = set()
+    for link in links.extract(markdown):
         target = ctx.index.resolve(link.target) if link.target else None
         if target and target.startswith("sources/"):
-            return True
-    return False
+            out.add(target.removesuffix(".md"))
+    return out
+
+
+def _protected(line: str, ctx: Context) -> bool:
+    """#22: a line the model may not rewrite: it speaks for another source, or for
+    nobody (human text). Only lines citing just this run's source are free."""
+    return bool(_line_key(line)) and cited_sources(line, ctx) != {ctx.source}
+
+
+PROTECTED_REASON = "lines citing other sources must stay as they are; use append"
 
 
 def ensure_citations(markdown: str, ctx: Context, counters: dict[str, int]) -> str:
@@ -246,7 +265,9 @@ def apply(body: str, proposal: Proposal, ctx: Context) -> Result:
     rejected: list[Rejection] = []
     existing = {_line_key(ln) for ln in original.split("\n") if ln.strip()}
 
-    _apply_lead(parts, proposal.lead, ctx, counters)
+    lead_rejection = _apply_lead(parts, proposal.lead, ctx, counters)
+    if lead_rejection:
+        rejected.append(lead_rejection)
 
     for op in proposal.ops:
         name = " ".join(op.section.strip().lstrip("#").split()) or DEFAULT_SECTION
@@ -255,8 +276,8 @@ def apply(body: str, proposal: Proposal, ctx: Context) -> Result:
                 Rejection(f"text for '{name}' is longer than {MAX_OP_CHARS} chars", name)
             )
             continue
-        new_text = clean_text(op.text, name, counters)
-        new_text = ensure_citations(fix_links(new_text, ctx, counters), ctx, counters)
+        cleaned = clean_text(op.text, name, counters)
+        new_text = ensure_citations(fix_links(cleaned, ctx, counters), ctx, counters)
         if not new_text.strip():
             continue
         section = parts.find(name)
@@ -277,6 +298,15 @@ def apply(body: str, proposal: Proposal, ctx: Context) -> Result:
                     name, new_text,
                 ))  # fmt: skip
                 continue
+            changed = _changed_protected(old, cleaned, ctx)
+            if changed:
+                _bump(counters, "replace_rejected_protected_lines")
+                rejected.append(Rejection(
+                    f"replace of '{name}' changes or drops {_quote(changed)}; {PROTECTED_REASON}",
+                    name, new_text,
+                ))  # fmt: skip
+                continue
+            new_text = _restore_protected(old, cleaned, new_text, ctx)
             section.lines = [section.lines[0], "", *new_text.split("\n"), ""]
             _bump(counters, "op_replace")
             continue
@@ -310,7 +340,45 @@ def apply(body: str, proposal: Proposal, ctx: Context) -> Result:
     return Result(new_body, new_body != original, rejected, counters)
 
 
-def _apply_lead(parts: Parts, lead: str, ctx: Context, counters: dict[str, int]) -> None:
+def _changed_protected(old: str, new: str, ctx: Context) -> list[str]:
+    """Protected lines of `old` that `new` doesn't keep: same `_line_key` (D3: wording
+    kept, formatting may change) and at least the same citations (the key ignores them)."""
+    kept: dict[str, list[set[str]]] = {}
+    for line in new.split("\n"):
+        kept.setdefault(_line_key(line), []).append(cited_sources(line, ctx))
+    return [
+        line.strip()
+        for line in old.split("\n")
+        if _protected(line, ctx)
+        and not any(cited_sources(line, ctx) <= c for c in kept.get(_line_key(line), []))
+    ]
+
+
+def _restore_protected(old: str, cleaned: str, new_text: str, ctx: Context) -> str:
+    """Kept protected lines go back byte for byte (an uncited human line would otherwise
+    get this run's citation). `new_text` is `cleaned` after fix_links and
+    ensure_citations, which keep the line count."""
+    originals: dict[str, str] = {}
+    for line in old.split("\n"):
+        if _protected(line, ctx):
+            originals.setdefault(_line_key(line), line)
+    out = new_text.split("\n")
+    for i, line in enumerate(cleaned.split("\n")):
+        orig = originals.get(_line_key(line))
+        if orig is not None and cited_sources(line, ctx) == cited_sources(orig, ctx):
+            out[i] = orig
+    return "\n".join(out)
+
+
+def _quote(lines: list[str], limit: int = 2) -> str:
+    shown = "; ".join(f'"{ln[:120]}"' for ln in lines[:limit])
+    more = f" (and {len(lines) - limit} more)" if len(lines) > limit else ""
+    return f"{shown}{more}"
+
+
+def _apply_lead(
+    parts: Parts, lead: str, ctx: Context, counters: dict[str, int]
+) -> Rejection | None:
     new = clean_text(lead, None, counters) if lead.strip() else ""
     new = re.split(r"\n\s*\n", new, maxsplit=1)[0] if new else ""
     new = " ".join(ln.strip() for ln in new.split("\n") if ln.strip())
@@ -318,11 +386,19 @@ def _apply_lead(parts: Parts, lead: str, ctx: Context, counters: dict[str, int])
     block = text.lead(pre_text)
     old = block.text if block else ""
     if not new or _line_key(new) == _line_key(old):
-        return
+        return None
     new = fix_links(new, ctx, counters)
     if link_targets(old, ctx.index) - link_targets(new, ctx.index):
         _bump(counters, "lead_lost_links_kept_old")
-        return
+        return None
+    if old and _protected(old, ctx) and _line_key(old) not in _line_key(new):
+        # #22: the old lead speaks for another source (or a human): extend, never rewrite
+        _bump(counters, "lead_rejected_protected")
+        reason = (
+            f"the new lead rewrites the current one; {PROTECTED_REASON} "
+            "(keep the lead word for word; you may add a sentence)"
+        )
+        return Rejection(reason, "lead", new)
     if not _cites(new, ctx) and text.word_count(text.plain(new)) >= FACT_MIN_WORDS:
         _bump(counters, "missing_citation_added")
         new = f"{new} ([[{ctx.source}]])"
@@ -336,6 +412,7 @@ def _apply_lead(parts: Parts, lead: str, ctx: Context, counters: dict[str, int])
         insert = ([""] if h1 is not None else []) + [new] + ([] if following == "" else [""])
         parts.pre[at:at] = insert
     _bump(counters, "lead_changed")
+    return None
 
 
 def _append_to(section: Section, added: list[str]) -> None:

@@ -2,8 +2,8 @@ You maintain one page of a personal Markdown wiki (Obsidian style).
 You get the current page and new claims from a source. Integrate the new claims into the page.
 
 Output JSON:
-- lead: the page's lead paragraph (1-3 sentences, defines the subject, stands alone). Keep the current lead if it is still right; improve it only if the new claims add something essential.
-- ops: edits to sections (headings level 2, without the "## "). op "append" adds text to the end of a section (the section is created if missing). op "replace" rewrites a whole section; it must keep every fact, citation and link already in that section.
+- lead: the page's lead paragraph (1-3 sentences, defines the subject, stands alone). Keep the current lead if it is still right. If the new claims add something essential, keep the current lead word for word and add a sentence; a lead citing another source is never reworded.
+- ops: edits to sections (headings level 2, without the "## "). op "append" adds text to the end of a section (the section is created if missing). op "replace" rewrites a whole section; it may only reword lines that cite ([[{source}]]). Every other line (citing another source, or no source) must stay word for word, and every fact, citation and link of the section must stay.
 
 Rules:
 - Every bullet or paragraph you write that states a fact ends with its citation, exactly: ([[{source}]])

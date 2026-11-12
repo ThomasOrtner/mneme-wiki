@@ -15,7 +15,7 @@ orchestrates; the model only makes small, checkable decisions.
 | 5 | **Resolve** | code + LLM | Is this subject an existing page? The subject's **name** matching a page's title or alias is an exact match. A match only through the subject's (model-made) aliases is not: that page becomes the first candidate. Neither is a name that looks like a document-local id (`WP2`, `D3`, `MS1`: 1–4 capitals and a number) matching a page from another source: work packages of two projects share such names. Then ≤ 4 candidates (alias matches, name shape, BM25), one **yes/no question per candidate**, with thinking. Every decision is logged with its reason. Finally, an alias that is another page's title or alias is dropped (`alias_conflict_dropped` in the run report). |
 | 6 | **Plan** | code | Groups claims by target page, picks paths for new pages. Document-local ids: if a new page's title would be a bare id like `D1` that another page already has (resolve decided they differ), the source's title goes in front ("Project Beta Proposal D1", `local_id_title_qualified`). On a title that names an owner before the id ("Project Alpha WP2"), the alias `WP2` becomes `PA-WP2` if the owner has a short name like `PA`, otherwise it is dropped (`local_id_alias_qualified` / `local_id_alias_dropped`). Elsewhere `M20`-shaped names are left alone: they can be global names (a mission acronym). |
 | 7 | **Patch** | LLM, one call per page | Gets the page, its new claims and the pages it may link to; returns a new lead and per-section `append`/`replace` operations. |
-| 8 | **Validate & apply** | code | Links only to known pages; every fact cited (missing citations are added and counted); `replace` may not drop links or shrink below 60 %; escaped newlines repaired. One retry, then the edit is **rejected** to `inbox/rejected/` with the reason. |
+| 8 | **Validate & apply** | code | Links only to known pages; every fact cited (missing citations are added and counted); `replace` may only reword lines citing this source, may not drop links or shrink below 60 %; escaped newlines repaired. One retry, then the edit is **rejected** to `inbox/rejected/` with the reason. |
 | 9 | **Abbreviations** | code | Removes `ABC (Long Name)` expansions that neither the source nor the page backs up (models invent them). |
 | 10 | **Autolink** | code | Turns the first plain mention of another page's title or alias into a link. |
 | 11 | **Finish** | code | Source page lists touched pages; `index.md`, `log.md`; lint; git commit; run report. |
@@ -54,7 +54,17 @@ doesn't have to link anything; autolink covers mentions it leaves plain.
   exists, not that it was on the Linkable list.
 - A `replace` that drops a link or citation the section had is rejected, and the old
   section is kept.
+- A `replace` may only reword lines that cite the source being integrated (and no other
+  source). Every other line, citing another source or nothing (human text), must come
+  back with the same words and at least the same citations; formatting may change (a
+  reflow is fine), and such lines are written back exactly as they were. Otherwise the
+  `replace` is rejected (`patch_replace_rejected_protected_lines`) and the model is asked
+  once more: "lines citing other sources must stay as they are; use append". A new source
+  that disagrees adds its own line next to the old one; it never rewrites the old claim.
 - A new lead that loses a link of the old lead is discarded, and the old lead is kept.
+- A lead that cites another source (or nothing) may only be extended: the new lead must
+  contain the old one word for word. A rewrite is rejected
+  (`patch_lead_rejected_protected`), retried once, and the old lead stays.
 - A final check on the whole page rejects the edit if any link target of the old body
   is missing from the new one (no silent data loss).
 

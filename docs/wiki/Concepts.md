@@ -39,6 +39,8 @@ comes from Andrej Karpathy's "LLM wiki" note.
   with links in both directions.
 - **Cite every claim.** Facts carry `([[sources/x]])`. An uncited claim is a lint finding.
 - **Never drop content.** An edit that loses links or shrinks a section too much is rejected.
+- **Never rewrite another source's claim.** A new source adds its own lines; lines citing
+  another source, and uncited human text, stay word for word.
 - **Contradictions are marked, never resolved silently**, as a `> [!warning] Contradiction`
   callout, and logged.
 - **Every change is a git diff.** One commit per integrated source or filed answer.
