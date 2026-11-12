@@ -1,6 +1,6 @@
 # Integration Pipeline
 
-← [Home](Home.md) · Full design: [plan.md → Integration stages](https://github.com/ThomasOrtner/mneme-wiki/blob/main/docs/plan.md#integration-stages),
+← [Home](Home.md) · Full design: [plan.md → Integration stages](https://github.com/ThomasOrtner/mneme-wiki/blob/main/docs/archive/mvp-plan.md#integration-stages),
 walkthrough with code references: [M3 tutorial](https://github.com/ThomasOrtner/mneme-wiki/blob/main/docs/milestones/M3-integrate.md).
 
 `mneme-wiki integrate <packet>` turns one source packet into one git commit. Code
@@ -11,14 +11,88 @@ orchestrates; the model only makes small, checkable decisions.
 | 1 | **Source page** | code (+ LLM if no `summary.md`) | Writes `sources/<slug>.md` with metadata and summary. |
 | 2 | **Chunk** | code | Splits `source.md` at headings into chunks of ≤ 500 words. The heading is the chunk's locator. |
 | 3 | **Extract** | LLM, per chunk | Lists subjects (name, entity or concept, aliases, description, claims), ≤ 15 per chunk. Schema-constrained JSON. |
-| 4 | **Merge** | code | Unions subjects of the same source by normalised name/alias. |
-| 5 | **Resolve** | code + LLM | Is this subject an existing page? Exact name/alias first; otherwise ≤ 4 candidates (name shape, then BM25), one **yes/no question per candidate**, with thinking. Every decision is logged with its reason. |
-| 6 | **Plan** | code | Groups claims by target page, picks paths for new pages. |
+| 4 | **Merge** | code | Unions subjects of the same source with the same normalised **name**. A shared alias isn't enough: models list related names (a mission's rover, a sibling camera) as aliases, so those go to resolve's yes/no check. |
+| 5 | **Resolve** | code + LLM | Is this subject an existing page? The subject's **name** matching a page's title or alias is an exact match. A match only through the subject's (model-made) aliases is not: that page becomes the first candidate. Neither is a name that looks like a document-local id (`WP2`, `D3`, `MS1`: 1–4 capitals and a number) matching a page from another source: work packages of two projects share such names. Then ≤ 4 candidates (alias matches, name shape, BM25), one **yes/no question per candidate**, with thinking. Every decision is logged with its reason. Finally, an alias that is another page's title or alias is dropped (`alias_conflict_dropped` in the run report). |
+| 6 | **Plan** | code | Groups claims by target page, picks paths for new pages. Document-local ids: if a new page's title would be a bare id like `D1` that another page already has (resolve decided they differ), the source's title goes in front ("Project Beta Proposal D1", `local_id_title_qualified`). On a title that names an owner before the id ("Project Alpha WP2"), the alias `WP2` becomes `PA-WP2` if the owner has a short name like `PA`, otherwise it is dropped (`local_id_alias_qualified` / `local_id_alias_dropped`). Elsewhere `M20`-shaped names are left alone: they can be global names (a mission acronym). |
 | 7 | **Patch** | LLM, one call per page | Gets the page, its new claims and the pages it may link to; returns a new lead and per-section `append`/`replace` operations. |
 | 8 | **Validate & apply** | code | Links only to known pages; every fact cited (missing citations are added and counted); `replace` may not drop links or shrink below 60 %; escaped newlines repaired. One retry, then the edit is **rejected** to `inbox/rejected/` with the reason. |
 | 9 | **Abbreviations** | code | Removes `ABC (Long Name)` expansions that neither the source nor the page backs up (models invent them). |
 | 10 | **Autolink** | code | Turns the first plain mention of another page's title or alias into a link. |
 | 11 | **Finish** | code | Source page lists touched pages; `index.md`, `log.md`; lint; git commit; run report. |
+
+## How pages get linked
+
+A link is an Obsidian wikilink to a page's slug path, e.g.
+`[[concepts/activity-plan|activity plan]]` (see [Vault Format](Vault-Format.md)). The
+pipeline has **no relationship stage**: extract lists subjects and claims, not relations
+between subjects. Page A links to page B only because B is *mentioned* in A's text. Links
+enter a page in five ways:
+
+| # | Where | Who | What it adds |
+|---|---|---|---|
+| 1 | New page skeleton (patch) | code | The lead ends with a citation `([[sources/x]])`; the source goes into `sources:` in the front matter. |
+| 2 | Patch | LLM | Links the model writes itself, but only to ids from the **Linkable pages** list in its prompt. |
+| 3 | Validate & apply | code | A fact line without a citation gets `([[sources/x]])` appended. |
+| 4 | Autolink | code | The first plain mention of another page's title or alias becomes a link. Most links come from here. |
+| 5 | Finish | code | The source page's section *Pages updated from this source* links every page the run wrote. |
+
+### The Linkable pages list (patch)
+
+Each patch call shows the model up to 40 pages it may link to:
+
+1. every other page planned in this run (new or updated), then
+2. existing pages that BM25 finds for the page's title plus its new claims.
+
+The prompt tells the model to use only these ids and never invent links. The model
+doesn't have to link anything; autolink covers mentions it leaves plain.
+
+### What validation does with links
+
+- A link whose target doesn't resolve to **exactly one** page (existing or planned in
+  this run) is unwrapped back to plain text (its alias, or the slug with spaces). It is
+  counted as `patch_invalid_link_removed` under *Validation counters* in the run report. Validation checks that the target
+  exists, not that it was on the Linkable list.
+- A `replace` that drops a link or citation the section had is rejected, and the old
+  section is kept.
+- A new lead that loses a link of the old lead is discarded, and the old lead is kept.
+- A final check on the whole page rejects the edit if any link target of the old body
+  is missing from the new one (no silent data loss).
+
+### Autolink rules
+
+Autolink runs after the abbreviation check, on the pages written in this run and on the
+source page. For each page it looks for the names (title and aliases) of all entity and
+concept pages, and links the first match:
+
+- **Prose only:** paragraphs and list items. Never headings, tables, quotes/callouts,
+  code, existing wikilinks, Markdown links or URLs.
+- **One link per target per page**, and none if the page already links there.
+- **Longest names first**, so "Integrated Activity Plan" wins over "Activity Plan".
+- Names of **≤ 5 characters match case-sensitively** (`TIME` is not `time`); longer
+  names ignore case. Names under 3 characters are never linked.
+- A name that **two pages share** is skipped as ambiguous (lint reports it as
+  `duplicate-name`).
+- A page never links to itself. Only entity and concept pages are targets; source and
+  synthesis pages are not.
+
+Why code and not the model: in M0, code linking gave about 2 links per page, the model
+without thinking 0.16 (TD-19).
+
+### Links in both directions
+
+When a source creates or updates page B:
+
+- B links to the source (citation, `sources:`), and the source links back to B (5).
+- Pages written **in the same run** that mention B get linked to it (2, 4).
+- **Older pages that mention B are not linked in this run.** Autolink only edits pages
+  the run wrote, so each run's diff stays its own. An older page gets the link only when
+  a later source updates it. B is never an `orphan` (its source links to it), but in
+  Obsidian's backlinks and graph it looks less connected than the text suggests.
+
+### Seeing what happened
+
+The run report (below) counts `autolinks`, the validation counters and rejected edits
+with their reasons. `--dry-run` shows the exact links each page would get.
 
 ## All or nothing
 
