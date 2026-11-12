@@ -64,7 +64,7 @@ the current baseline.
 Phase 1 stops wrong merges; this phase lets a vault tell the pipeline what it already
 knows, so that names which mean one thing end up on one page.
 
-- [ ] **#24** glossary: a curated list of abbreviations and full names that code reads
+- [x] **#24** glossary: a curated list of abbreviations and full names that code reads
       (resolve exact match, aliases, the abbreviation check, the preferred form in
       links). It is the structured part of #14, taken out because it is deterministic,
       needs no prompt rules and helps most in acronym-heavy vaults. It goes first: #14
