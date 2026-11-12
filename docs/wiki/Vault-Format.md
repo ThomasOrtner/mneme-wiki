@@ -9,6 +9,7 @@
 D:\wikis\
   space-ops\              the vault (a git repo; open it in Obsidian)
     WIKI.md               schema + rules for whoever writes content
+    glossary.md           optional: curated abbreviations and names that code reads
     index.md              generated: every page by type, one line each
     log.md                append-only operation log
     sources\  entities\  concepts\  syntheses\  attachments\
@@ -130,6 +131,48 @@ The ROCC is located in Turin ([[sources/rocc-glossary]]).
 2. A **lead paragraph** that makes sense on its own (it becomes the `index.md` line).
 3. `##` sections by topic.
 4. Inline citations on every claim; links mostly in the prose.
+
+## glossary.md
+
+An optional, curated list of abbreviations and names that are known to mean one thing
+in this vault (#24). Like `WIKI.md` it is a vault file, not a wiki page: no front
+matter, not in `index.md`. The pipeline reads one Markdown table with these columns
+(more tables with the same header are read too; everything else in the file is free
+text):
+
+```markdown
+| Term | Full name | Kind | Prefer | Definition |
+|---|---|---|---|---|
+| ROCC | Rover Operations Control Centre | organisation | short | Centre that operates the rover. |
+| TPC | Tactical Planning Cycle | concept | full | The daily planning loop. |
+```
+
+| Column | Meaning |
+|---|---|
+| `Term` | the short form, usually the abbreviation. A cell may be a link, `[[entities/rocc\|ROCC]]`; its text counts |
+| `Full name` | the long form; a page created for the term gets it as title (and slug) |
+| `Kind` | `concept`, `entity`, or an `entity_kind` (`organisation`, `system`, …). Sets the kind of a **new** page; for an existing page a mismatch is a lint warning. Empty = whatever extract says |
+| `Prefer` | `short` or `full`: the form links show (`[[entities/rover-operations-control-centre\|ROCC]]`). Empty = as the text has it |
+| `Definition` | context for the model only; it never becomes page text (it isn't a source) |
+
+What it changes:
+
+- **No pages by itself.** A page is created only when a source mentions a term, so
+  every claim still cites a source.
+- A subject named by a term or full name (or with one as alias) goes to the term's page
+  by exact match, with no model call: "ROCC" and "Rover Operations Control Centre" in one
+  source become one page. Curated names are trusted; model-made aliases are still
+  checked.
+- A page a run touches gets its row's names as aliases, also pages made before the
+  glossary existed.
+- The names check and the abbreviation check accept the glossary's names and
+  expansions; a wrong expansion is still removed.
+- Lint: `glossary-format` (a row it can't use), `glossary-conflict` (a name in two rows,
+  or on a page whose title isn't in the row), `glossary-kind`, and `duplicate-name` for
+  two pages the glossary says are one thing (merge them by hand, #6).
+
+Change it deliberately, commit it, and log it as a `schema` entry in `log.md`. Without
+`glossary.md` nothing changes.
 
 ## Editing by hand
 

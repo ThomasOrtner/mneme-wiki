@@ -27,6 +27,7 @@ re-read on every question. Pages are written for a human reading in Obsidian.
 | `attachments/` | images and other files linked from pages |
 | `index.md` | every page, one line each, by type. Generated: don't edit by hand |
 | `log.md` | append-only record of every operation |
+| `glossary.md` | optional: curated abbreviations and names (`Term \| Full name \| Kind \| Prefer \| Definition`). Code reads it; edit it deliberately and log a `schema` entry |
 
 File names are the kebab-case slug of the title (`Rover Operations Control
 Centre` → `entities/rover-operations-control-centre.md`). Never rename or delete

@@ -21,6 +21,21 @@ orchestrates; the model only makes small, checkable decisions.
 | 10 | **Autolink** | code | Turns the first plain mention of another page's title or alias into a link. |
 | 11 | **Finish** | code | Source page lists touched pages; `index.md`, `log.md`; lint; git commit; run report. |
 
+## With a glossary
+
+If the vault has a [`glossary.md`](Vault-Format.md#glossarymd), these stages read it;
+without one they behave exactly as described above.
+
+| Stage | What the glossary changes |
+|---|---|
+| Extract | Terms the chunk mentions are listed first among the known names, as `Full name (aka Term)` |
+| Merge | Before merging, a subject named by a term or full name (or with one as alias) takes the full name as its name and the row's names as *curated* aliases (`glossary_matched`); `Kind` sets entity/concept for a new page. So "ROCC" and "Rover Operations Control Centre" of one source become one subject |
+| Resolve | Curated names count for the exact match (no model call), also against an existing page titled with the short form |
+| Names | The glossary's names are evidence, like the names of existing pages |
+| Plan / patch | A page the run touches gets its row's names as aliases; the patch prompt's linkable pages show the `Prefer` form |
+| Abbreviations | `Term (Full name)` from the glossary is evidence: a correct expansion stays, a wrong one is removed |
+| Autolink | A row's names link to the one page that carries any of them; `Prefer` sets the link text (`[[…\|ROCC]]`) |
+
 ## How pages get linked
 
 A link is an Obsidian wikilink to a page's slug path, e.g.

@@ -128,7 +128,7 @@ class _Pool:
         self.cands[cid] = Candidate(
             cid, subject.name, list(subject.aliases), subject.description, subject.kind
         )
-        self.add_names(cid, [subject.name], subject.aliases)
+        self.add_names(cid, [subject.name, *subject.curated], subject.aliases)
         return cid
 
     def add_names(self, cid: str, names: list[str], aliases: list[str] = ()) -> None:
@@ -142,7 +142,13 @@ class _Pool:
     def exact(self, subject: Subject) -> str | None:
         cid = self.by_name.get(name_key(subject.name))
         if cid and looks_local_id(subject.name) and not cid.startswith("new:"):
-            return None  # a local id of another document: ask, don't assume (#13)
+            if not subject.curated:
+                return None  # a local id of another document: ask, don't assume (#13)
+        if cid is None:  # curated glossary names are trusted like the name (#24)
+            cid = next(
+                (self.by_name[k] for k in map(name_key, subject.curated) if k in self.by_name),
+                None,
+            )
         return cid
 
     def forced(self, subject: Subject) -> list[tuple[Candidate, str]]:

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from .. import edits, links
 from .. import frontmatter as fm
@@ -22,6 +23,9 @@ from ..search import Doc, SearchIndex
 from ..vault import Page, Vault
 from .common import KnownPage, name_key, unique
 from .plan import PagePlan
+
+if TYPE_CHECKING:
+    from ..glossary import Glossary
 
 LINKABLE_LIMIT = 40
 PAGE_CHAR_BUDGET = 24_000  # ≈ 6k tokens; bigger pages get headings only (see prompt)
@@ -166,6 +170,7 @@ def patch_page(
     today: dt.date,
     step: str,
     reserved_names: dict[str, str],
+    glossary: Glossary | None = None,
 ) -> PatchResult:
     """Propose, validate and write one page into `ws` (a Workspace)."""
     result = PatchResult(entry.path, entry.new, False)
@@ -178,7 +183,10 @@ def patch_page(
     body = page.body.replace("\r\n", "\n")
     client = llm.for_role("patch")
     system = SYSTEM.replace("{source}", ctx.source).replace("{language}", language_name(language))
-    base = user_prompt(entry, body, ctx.source, source_title, linkable(entry, plans, pages))
+    link_list = linkable(entry, plans, pages)
+    if glossary:  # #24: show the glossary's preferred form (`Prefer`)
+        link_list = [(pid, glossary.shown_for([title]) or title) for pid, title in link_list]
+    base = user_prompt(entry, body, ctx.source, source_title, link_list)
 
     applied: edits.Result | None = None
     prompt = base

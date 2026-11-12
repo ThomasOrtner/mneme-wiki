@@ -40,6 +40,7 @@ Work is tracked in GitHub issues; the full rules are in
 | `stages/` | `source`, `extract`, `resolve`, `names`, `plan`, `patch`, `autolink`, `common` |
 | `prompts/*.md` | One system prompt per stage |
 | `edits.py` | Edit model, validation, apply |
+| `glossary.py` | The vault glossary: parse `glossary.md`, look up names, map subjects to terms |
 | `expansions.py` | Remove abbreviation expansions the evidence doesn't back |
 | `integrate.py` | Orchestrates the stages for one packet |
 | `index_log.py` | `index.md` generation, `log.md` appends |

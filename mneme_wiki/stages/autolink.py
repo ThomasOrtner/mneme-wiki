@@ -7,7 +7,9 @@ M0: code linking gave ~2 links per page, the model without thinking 0.16. Rules:
 - longest names first ("Integrated Activity Plan" before "Activity Plan");
 - names of ≤ 5 characters match case-sensitively (`TIME`, `Task` are not `Time`,
   `task`), longer names case-insensitively; names under 3 characters never;
-- a name that two pages claim is skipped (it's ambiguous; lint reports it).
+- a name that two pages claim is skipped (it's ambiguous; lint reports it);
+- with a vault glossary (#24), a page's glossary names link to it even before the page
+  carries them as aliases, and `Prefer` sets the shown text: `[[…|ROCC]]` for `short`.
 Only the pages written in this run are linked, so the run's diff stays its own.
 """
 
@@ -16,10 +18,14 @@ from __future__ import annotations
 import re
 from collections import defaultdict
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from .. import links, text
 from ..vault import Page, Vault
 from .common import name_key
+
+if TYPE_CHECKING:
+    from ..glossary import Glossary
 
 MIN_NAME = 3
 CASE_SENSITIVE_MAX = 5
@@ -33,9 +39,10 @@ _PROSE = ("paragraph", "list_item")
 class Name:
     name: str
     target: str  # page path
+    shown: str | None = None  # the link's text; None = as the body has it
 
 
-def names_for(pages: list[Page]) -> list[Name]:
+def names_for(pages: list[Page], glossary: Glossary | None = None) -> list[Name]:
     """Linkable names of entity/concept pages, longest first; ambiguous ones dropped."""
     owners: dict[str, set[str]] = defaultdict(set)
     spelled: list[Name] = []
@@ -48,8 +55,34 @@ def names_for(pages: list[Page]) -> list[Name]:
             if len(n) >= MIN_NAME and not n.lower().endswith(_SKIP_SUFFIX) and name_key(n):
                 owners[name_key(n)].add(page.path)
                 spelled.append(Name(n, page.path))
+    if glossary:
+        spelled = _with_glossary(spelled, owners, glossary)
     out = [nm for nm in spelled if len(owners[name_key(nm.name)]) == 1]
     out.sort(key=lambda nm: (-len(nm.name), nm.name))
+    return out
+
+
+def _with_glossary(
+    spelled: list[Name], owners: dict[str, set[str]], glossary: Glossary
+) -> list[Name]:
+    """Add each glossary row's names to the one page that carries any of them, and set
+    the shown form. A row whose names are on two pages is left alone (lint reports it)."""
+    out = list(spelled)
+    for t in glossary.terms:
+        pages = set().union(*(owners.get(name_key(n), set()) for n in t.names()))
+        if len(pages) != 1:
+            continue
+        target = next(iter(pages))
+        for n in t.names():
+            if len(n) >= MIN_NAME and not owners.get(name_key(n)):
+                owners[name_key(n)].add(target)
+                out.append(Name(n, target))
+        shown = t.shown()
+        if shown:
+            keys = {name_key(n) for n in t.names()}
+            out = [Name(nm.name, nm.target, shown)
+                   if nm.target == target and name_key(nm.name) in keys else nm
+                   for nm in out]  # fmt: skip
     return out
 
 
@@ -92,7 +125,7 @@ def link_body(body: str, path: str, names: list[Name], index: links.LinkIndex) -
         m = rx.search(masked)
         if not m:
             continue
-        shown = body[m.start() : m.end()]
+        shown = nm.shown or body[m.start() : m.end()]
         body = body[: m.start()] + links.format_link(nm.target, alias=shown) + body[m.end() :]
         masked = _mask(body)
         linked.add(nm.target)
@@ -100,10 +133,10 @@ def link_body(body: str, path: str, names: list[Name], index: links.LinkIndex) -
     return body, added
 
 
-def autolink(ws: Vault, paths: list[str]) -> dict[str, int]:
+def autolink(ws: Vault, paths: list[str], glossary: Glossary | None = None) -> dict[str, int]:
     """Autolink the pages `paths` in `ws`; returns {path: links added}."""
     pages = [p for _, p in ws.iter_pages() if isinstance(p, Page)]
-    names = names_for(pages)
+    names = names_for(pages, glossary)
     index = links.LinkIndex(ws.files())
     by_path = {p.path: p for p in pages}
     added: dict[str, int] = {}

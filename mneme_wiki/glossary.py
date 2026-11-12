@@ -30,7 +30,7 @@ import re
 from dataclasses import dataclass, field
 
 from . import links
-from .stages.common import ENTITY_KINDS, name_key, unique
+from .stages.common import ENTITY_KINDS, Subject, name_key, unique
 from .vault import GLOSSARY_FILE, Vault
 
 __all__ = ["GLOSSARY_FILE", "Glossary", "Term", "load", "parse"]
@@ -118,6 +118,32 @@ class Glossary:
         """Text for the abbreviation and names checks: every term with its full name."""
         return "\n".join(f"{t.term} ({t.full})" if t.term and t.full else t.title
                          for t in self.terms)  # fmt: skip
+
+
+def canonicalise(
+    subjects: list[Subject], glossary: Glossary, counters: dict[str, int] | None = None
+) -> None:
+    """A subject named by a glossary term or full name, or with one as alias, takes the
+    term's title as its name and the row's names as curated aliases. Merge then unions
+    "ROCC" and "Rover Operations Control Centre" of one source, and resolve trusts the
+    curated names for an exact match. `Kind` overrides extract (D3; plan only uses it
+    for new pages)."""
+    if not glossary:
+        return
+    for s in subjects:
+        t = glossary.match(s.names())
+        if t is None:
+            continue
+        old = s.name
+        s.name = t.title
+        s.aliases = unique([*t.names(), old, *s.aliases], exclude=[s.name])
+        s.curated = t.names()
+        if t.kind:
+            s.kind = t.kind
+            if t.kind == "entity":
+                s.entity_kind = t.entity_kind
+        if counters is not None:
+            counters["glossary_matched"] = counters.get("glossary_matched", 0) + 1
 
 
 def load(vault: Vault) -> Glossary:

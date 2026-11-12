@@ -15,8 +15,11 @@ Deterministic checks, no model involved:
 |---|---|---|
 | `broken-link` | error | `[[links]]` (body or front-matter lists) to pages that don't exist |
 | `frontmatter` | error | Missing, unparsable or invalid front matter (required keys, types, `status` values) |
-| `duplicate-name` | error | Two pages with the same title or alias |
+| `duplicate-name` | error | Two pages with the same title or alias, or two pages the glossary says are one thing |
 | `case-collision` | error | Paths that differ only by case (break on Windows/macOS) |
+| `glossary-format` | warning | A `glossary.md` row that can't be used (wrong cell count, unknown `Kind` or `Prefer`, no name) |
+| `glossary-conflict` | warning | A glossary name in two rows, or carried by a page whose title isn't in that row |
+| `glossary-kind` | warning | A page whose kind differs from its glossary row's `Kind` |
 | `orphan` | warning | Content pages nothing links to |
 | `uncited` | warning | A paragraph or list item of ≥ 8 words in an entity/concept/synthesis page with no link to `sources/` |
 | `ambiguous-link` | warning | A bare `[[name]]` that matches several pages |

@@ -11,12 +11,16 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from ..llm import LLM
 from ..packet import Chunk, Packet
 from ..prompts import load_prompt
 from ..search import Doc, SearchIndex
 from .common import ENTITY_KINDS, Claim, KnownPage, Subject, name_key, unique
+
+if TYPE_CHECKING:
+    from ..glossary import Glossary
 
 MAX_SUBJECTS = 15  # per chunk; M0: 12 dropped subjects of a dense glossary chunk
 MAX_CLAIMS = 8
@@ -59,8 +63,14 @@ def user_prompt(packet: Packet, chunk: Chunk, known: list[str]) -> str:
     )
 
 
-def known_for_chunk(chunk: Chunk, pages: list[KnownPage], earlier: list[Subject]) -> list[str]:
-    """Titles (with aliases) worth showing for this chunk, most relevant first."""
+def known_for_chunk(
+    chunk: Chunk,
+    pages: list[KnownPage],
+    earlier: list[Subject],
+    glossary: Glossary | None = None,
+) -> list[str]:
+    """Titles (with aliases) worth showing for this chunk, most relevant first. Glossary
+    terms the chunk mentions come first, under their full name (#24)."""
     lowered = chunk.text.casefold()
     entries: dict[str, str] = {}
 
@@ -70,6 +80,9 @@ def known_for_chunk(chunk: Chunk, pages: list[KnownPage], earlier: list[Subject]
             shown = [a for a in aliases if a][:4]
             entries[key] = title + (f" (aka {', '.join(shown)})" if shown else "")
 
+    for t in glossary.terms if glossary else ():
+        if any(_mentioned(n, chunk.text, lowered) for n in t.names()):
+            add(t.title, [n for n in t.names() if n != t.title])
     for page in pages:  # mentioned in the chunk
         if any(_mentioned(n, chunk.text, lowered) for n in page.names()):
             add(page.title, page.aliases)
@@ -135,12 +148,13 @@ def extract(
     *,
     log: Callable[[str], None] = lambda _m: None,
     counters: dict[str, int] | None = None,
+    glossary: Glossary | None = None,
 ) -> list[Subject]:
     client = llm.for_role("extract")
     counters = counters if counters is not None else {}
     subjects: list[Subject] = []
     for chunk in chunks:
-        known = known_for_chunk(chunk, pages, subjects)
+        known = known_for_chunk(chunk, pages, subjects, glossary)
         step = f"extract {chunk.index + 1}/{len(chunks)} {chunk.locator}"
         data = client.json(SYSTEM, user_prompt(packet, chunk, known), SCHEMA, step=step)
         if data is None:
@@ -166,7 +180,7 @@ def merge_within_source(subjects: list[Subject]) -> list[Subject]:
         if hit is None:
             groups.append(
                 Subject(s.name, s.kind, s.entity_kind, list(s.aliases), s.description,
-                        list(s.claims), list(s.chunks))
+                        list(s.claims), list(s.chunks), list(s.curated))
             )  # fmt: skip
             hit = len(groups) - 1
         else:
