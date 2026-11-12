@@ -38,10 +38,13 @@ def plan(
     produce nothing. A new page whose slug is taken by an unrelated page (or differs
     only in case from one) gets `-2`, `-3`, … appended.
 
-    Document-local ids (#13): a new page is never titled with a bare local id; it gets
-    `owner` (the source's title) in front ("Project Beta Proposal D1"). Local-id aliases
-    are qualified with their owner's short name or dropped (D3)."""
+    Document-local ids (#13): a new page whose bare local-id title (`D1`) is already a
+    page's name gets `owner` (the source's title) in front ("Project Beta Proposal D1"):
+    resolve decided they differ, so the same title would be a duplicate. Without a
+    collision the title stays, since `M20`-shaped names can be global. Local-id aliases
+    on an owner-qualified title are qualified or dropped (D3)."""
     counters = counters if counters is not None else {}
+    taken_names = {name_key(n) for p in known_pages(vault) for n in p.names()}
     plans: dict[str, PagePlan] = {}
     for r in resolved:
         s = r.subject
@@ -51,7 +54,7 @@ def plan(
         if r.target:
             path, new = r.target, False
         else:
-            if owner and looks_local_id(s.name):
+            if owner and looks_local_id(s.name) and name_key(s.name) in taken_names:
                 title = f"{owner} {s.name}"
                 counters["local_id_title_qualified"] = (
                     counters.get("local_id_title_qualified", 0) + 1
@@ -80,10 +83,11 @@ def plan(
 
 
 def _qualify_local_ids(plans: list[PagePlan], vault: Vault, counters: dict[str, int]) -> None:
-    """#13 D3: a local id (`WP2`) is only valid inside its project, so it is never a bare
-    alias. If the page title names the owner before the id ("Project Alpha WP2") and the
-    owner has an acronym-like short name (`PA`), the alias becomes `PA-WP2`, a handle
-    made up on purpose; otherwise it is dropped."""
+    """#13 D3: a local id (`WP2`) is only valid inside its project, so it is no bare
+    alias of a page whose title names the owner before the id ("Project Alpha WP2").
+    If the owner has an acronym-like short name (`PA`) the alias becomes `PA-WP2`, a
+    handle made up on purpose; otherwise it is dropped. Without an owner in the title
+    there is no evidence the id is local (`M20` on "Mars 2020"), so the alias stays."""
     names: dict[str, list[str]] = {}  # owner name_key -> its names
     for p in known_pages(vault):
         names.setdefault(name_key(p.title), []).extend(p.names())
@@ -98,23 +102,26 @@ def _qualify_local_ids(plans: list[PagePlan], vault: Vault, counters: dict[str, 
             continue
         kept = []
         for alias in p.aliases:
-            if not looks_local_id(alias):
+            owner = _owner_in_title(p.title, alias) if looks_local_id(alias) else ""
+            if not owner:
                 kept.append(alias)
                 continue
             bump("local_id_alias_dropped")
-            short = _owner_short(p.title, alias, names)
+            short = _owner_short(owner, names)
             if short:
                 kept.append(f"{short}-{alias.replace(' ', '')}")
                 bump("local_id_alias_qualified")
         p.aliases = unique(kept, exclude=[p.title] if p.new else [])
 
 
-def _owner_short(title: str, local_id: str, names: dict[str, list[str]]) -> str | None:
-    """The owner's shortest acronym-like name, if `title` is "<owner> <local_id>…"."""
+def _owner_in_title(title: str, local_id: str) -> str:
+    """ "Project Alpha" if `title` is "Project Alpha <local_id>…", else ""."""
     m = re.search(rf"(?<!\w){re.escape(local_id)}(?!\w)", title)
-    owner = title[: m.start()].strip(" -:") if m else ""
-    if not owner:
-        return None
+    return title[: m.start()].strip(" -:") if m else ""
+
+
+def _owner_short(owner: str, names: dict[str, list[str]]) -> str | None:
+    """The owner's shortest acronym-like name (`PA`), if it has one."""
     shorts = [
         n
         for n in names.get(name_key(owner), [])
