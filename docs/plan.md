@@ -33,7 +33,7 @@ How agents use this file: [AGENTS.md § 7](../AGENTS.md#7-workflow).
 
 ## Phase 0: docs
 
-- [ ] PR #18: how pages get linked, what `status` and `entity_kind` mean.
+- [x] PR #18: how pages get linked, what `status` and `entity_kind` mean.
 
 ## Phase 1: stop wrong merges and invented content at the source
 
@@ -48,7 +48,7 @@ or rename (phase 4), so this goes first. #15 and #13 share one root cause: resol
 - [x] **#13**, cut down to option 1 (prompt rules; local ids like "WP2" never skip the
       check) plus option 3 (producer advice in `docs/wiki/Source-Packets.md`). Option 2
       (`part_of`) moves to #16. Stacked on #15.
-- [ ] **#22** (bug, from #13's notes): a `replace` can keep a claim's
+- [x] **#22** (bug, from #13's notes): a `replace` can keep a claim's
       citation but change its fact to another source's. Validation (L-4) checks that
       links and citations survive, not that a cited fact still says the same thing.
 - [ ] **#25** (bug): extract can invent a page title (glued acronym + made-up
