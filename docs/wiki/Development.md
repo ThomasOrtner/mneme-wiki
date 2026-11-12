@@ -37,7 +37,7 @@ Work is tracked in GitHub issues; the full rules are in
 | `workspace.py` | In-memory overlay of the vault: collect writes, diff, flush |
 | `text.py` | Markdown blocks with line numbers, lead sentence, search tokens |
 | `packet.py` | Load and check source packets, chunk them |
-| `stages/` | `source`, `extract`, `resolve`, `plan`, `patch`, `autolink`, `common` |
+| `stages/` | `source`, `extract`, `resolve`, `names`, `plan`, `patch`, `autolink`, `common` |
 | `prompts/*.md` | One system prompt per stage |
 | `edits.py` | Edit model, validation, apply |
 | `expansions.py` | Remove abbreviation expansions the evidence doesn't back |

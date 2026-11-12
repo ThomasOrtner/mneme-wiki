@@ -79,10 +79,10 @@ def test_replace_that_drops_a_link_is_rejected() -> None:
 
 def test_replace_that_shrinks_is_rejected_and_a_good_one_applies() -> None:
     long = "\n".join(
-        f"- Fact {i} about the [[concepts/activity-plan]] ([[sources/other]])." for i in range(6)
+        f"- Fact {i} about the [[concepts/activity-plan]] ([[{SRC}]])." for i in range(6)
     )
     body = f"\n# X\n\n## S\n\n{long}\n"
-    short = "- [[concepts/activity-plan]] ([[sources/other]])"
+    short = f"- [[concepts/activity-plan]] ([[{SRC}]])"
     r = edits.apply(body, prop(("S", "replace", short)), CTX)
     assert not r.changed and "shrinks" in r.rejected[0].reason
     better = long.replace("Fact", "Statement")
@@ -152,3 +152,110 @@ def test_proposal_from_messy_json() -> None:
         {"lead": None, "ops": [{"section": "A", "op": "delete", "text": "t"}, {"x": 1}, "junk"]}
     )
     assert p.lead == "" and [(o.section, o.op) for o in p.ops] == [("A", "append")]
+
+
+# #22: lines that speak for another source (or for nobody) are never rewritten
+SCHEDULE = """
+# Project Alpha
+
+Project Alpha is a research project ([[sources/proposal-a]]).
+
+## Schedule
+
+- The project runs from 2024 to 2026 ([[sources/proposal-a]]).
+- Kick-off meeting held in Vienna with all partners ([[sources/proposal-b]]).
+Hand-written note: check the   timeline with the partners.
+"""
+CTX_B = edits.Context(
+    "sources/proposal-b",
+    links.LinkIndex(["sources/proposal-a.md", "sources/proposal-b.md", "concepts/x.md"]),
+)
+
+
+def test_replace_that_rewrites_another_sources_line_is_rejected() -> None:
+    new = (
+        "- The project runs from 2025 to 2027 ([[sources/proposal-a]]).\n"
+        "- Kick-off meeting held in Vienna with all partners ([[sources/proposal-b]]).\n"
+        "Hand-written note: check the   timeline with the partners."
+    )
+    r = edits.apply(SCHEDULE, prop(("Schedule", "replace", new)), CTX_B)
+    assert not r.changed and r.body == SCHEDULE
+    (rej,) = r.rejected
+    assert rej.retry and rej.section == "Schedule"
+    assert "2024 to 2026" in rej.reason and "use append" in rej.reason
+    assert r.counters["replace_rejected_protected_lines"] == 1
+
+
+def test_replace_that_moves_a_citation_to_another_source_is_rejected() -> None:
+    # the text stays, but the claim is now attributed to proposal-b (_line_key drops citations)
+    new = (
+        "- The project runs from 2024 to 2026 ([[sources/proposal-b]]).\n"
+        "- Kick-off meeting held in Vienna with all partners ([[sources/proposal-a]]).\n"
+        "Hand-written note: check the timeline with the partners."
+    )
+    r = edits.apply(SCHEDULE, prop(("Schedule", "replace", new)), CTX_B)
+    assert not r.changed and r.counters["replace_rejected_protected_lines"] == 1
+
+
+def test_replace_that_rewords_only_this_sources_lines_is_accepted() -> None:
+    new = (
+        "* The project runs from **2024** to 2026 ([[sources/proposal-a]]).\n"  # reflow (D3)
+        "- The kick-off meeting was held in Vienna with every partner ([[sources/proposal-b]]).\n"
+        "- A second meeting follows in Graz one year later.\n"
+        "Hand-written note: check the timeline with the partners."
+    )
+    r = edits.apply(SCHEDULE, prop(("Schedule", "replace", new)), CTX_B)
+    assert r.changed and not r.rejected and r.counters["op_replace"] == 1
+    schedule = r.body.split("## Schedule\n\n")[1]
+    assert schedule == (
+        # kept lines come back byte for byte; the human line gets no citation
+        "- The project runs from 2024 to 2026 ([[sources/proposal-a]]).\n"
+        "- The kick-off meeting was held in Vienna with every partner ([[sources/proposal-b]]).\n"
+        "- A second meeting follows in Graz one year later. ([[sources/proposal-b]])\n"
+        "Hand-written note: check the   timeline with the partners.\n"
+    )
+
+
+def test_replace_that_drops_an_uncited_human_line_is_rejected() -> None:
+    # D2: uncited lines are protected like lines citing another source
+    new = (
+        "- The project runs from 2024 to 2026 ([[sources/proposal-a]]).\n"
+        "- Kick-off meeting held in Vienna with all partners and guests ([[sources/proposal-b]])."
+    )
+    r = edits.apply(SCHEDULE, prop(("Schedule", "replace", new)), CTX_B)
+    assert not r.changed
+    assert "Hand-written note" in r.rejected[0].reason
+
+
+def test_lead_of_another_source_may_be_extended_not_rewritten() -> None:
+    r = edits.apply(
+        SCHEDULE, prop(lead="Project Alpha is a large research project ([[sources/proposal-a]])."),
+        CTX_B,
+    )  # fmt: skip
+    assert not r.changed and r.counters["lead_rejected_protected"] == 1
+    (rej,) = r.rejected
+    assert rej.retry and rej.section == "lead" and "word for word" in rej.reason
+    extended = (
+        "Project Alpha is a research project ([[sources/proposal-a]]). "
+        "It has three work packages ([[sources/proposal-b]])."
+    )
+    r = edits.apply(SCHEDULE, prop(lead=extended), CTX_B)
+    assert r.changed and not r.rejected and f"\n{extended}\n" in r.body
+
+
+def test_lead_citing_only_this_source_may_be_rewritten() -> None:
+    body = "\n# P\n\nP is a project with partners ([[sources/proposal-b]]).\n"
+    new = "P is a research project with four partners ([[sources/proposal-b]])."
+    r = edits.apply(body, prop(lead=new), CTX_B)
+    assert r.changed and not r.rejected and r.body == f"\n# P\n\n{new}\n"
+
+
+def test_lead_lines_lose_their_list_marks() -> None:
+    # #22 run: the model extended a lead with "\n- <new sentence>"; joined, the "-" ended
+    # up mid-paragraph
+    lead = (
+        "Project Alpha is a research project ([[sources/proposal-a]]).\n"
+        "- It was extended by one year ([[sources/proposal-b]])."
+    )
+    r = edits.apply(SCHEDULE, prop(lead=lead), CTX_B)
+    assert r.changed and lead.replace("\n- ", " ") in r.body

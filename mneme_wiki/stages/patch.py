@@ -3,7 +3,8 @@
 The model sees the current page (or a skeleton for a new page), the new claims
 with their locators, and the pages it may link to. It returns a lead and
 section operations, never a whole file. If `edits.apply` rejects an operation for
-a reason the model can fix (a replace that drops links, or shrinks a section), the
+a reason the model can fix (a replace that drops links, rewrites lines of another
+source or shrinks a section; a lead that rewrites another source's lead), the
 model is asked once more with the reasons; whatever is still rejected after that is
 reported, and the valid rest is applied.
 """
@@ -146,7 +147,8 @@ def retry_prompt(base: str, rejected: list[edits.Rejection]) -> str:
     reasons = "\n".join(f"- {r.reason}" for r in rejected)
     return (
         f"{base}\n\nYour previous answer was partly rejected:\n{reasons}\n"
-        "Answer again. A replace must keep every link and citation of the section and "
+        "Answer again. A replace may only reword lines citing this source; it must keep "
+        "every other line word for word, every link and citation of the section, and "
         "must not shorten it; if unsure, use append."
     )
 

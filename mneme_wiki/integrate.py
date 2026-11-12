@@ -1,6 +1,6 @@
 """Integrate one source packet into a vault: the stage orchestration (M3).
 
-chunk → extract → merge in source → resolve → plan → source page → patch + apply
+chunk → extract → merge in source → resolve → names (#25) → plan → source page → patch + apply
 (per page) → autolink → touched-pages list → reindex → lint → log → one git commit.
 
 Every write goes into a `Workspace` first. Nothing reaches the vault until all
@@ -31,6 +31,7 @@ from .lint import lint
 from .llm import LLM, Call
 from .stages import autolink as autolink_stage
 from .stages import extract as extract_stage
+from .stages import names as names_stage
 from .stages import patch as patch_stage
 from .stages import plan as plan_stage
 from .stages import resolve as resolve_stage
@@ -64,6 +65,7 @@ class Report:
     created: list[str] = field(default_factory=list)
     updated: list[str] = field(default_factory=list)
     rejected: list[dict] = field(default_factory=list)
+    skipped: list[str] = field(default_factory=list)  # subjects with no backed name (#25)
     autolinks: int = 0
     counters: dict[str, int] = field(default_factory=dict)
     calls: dict[str, dict] = field(default_factory=dict)
@@ -119,13 +121,17 @@ def _strip_expansions(
     ws: Workspace, vault: Vault, paths: list[str], source_text: str, counters: dict[str, int]
 ) -> None:
     """Remove abbreviation expansions this run invented (runs before autolink, whose links
-    would split the phrases). What the page already said or names itself is evidence, so
-    text that was in the vault before this run is left alone."""
+    would split the phrases). What the page already said or was named before this run is
+    evidence, so text that was in the vault before this run is left alone. A new page's
+    own title and aliases are not (#25): they come from this run's model output."""
     for rel in paths:
         page = ws.read_page(rel)
-        aliases = page.meta.get("aliases") if isinstance(page.meta.get("aliases"), list) else []
-        old = vault.read_page(rel).body if vault.exists(rel) else ""
-        evidence = "\n".join([source_text, page.title, *map(str, aliases), old])
+        evidence = [source_text]
+        if vault.exists(rel):
+            old = vault.read_page(rel)
+            aliases = old.meta.get("aliases") if isinstance(old.meta.get("aliases"), list) else []
+            evidence += [old.title, *map(str, aliases), old.body]
+        evidence = "\n".join(evidence)
         body = expansions.strip(page.body, evidence, counters)
         if body != page.body:
             page.body = body
@@ -245,6 +251,14 @@ def integrate(
     if stop_after == "resolve":
         return stop("resolve", [r.to_dict() for r in resolved])
 
+    # -- names: new titles and aliases must be in the source (#25) ------------------------
+    evidence = names_stage.Evidence(pkt.text, known, pkt.title)
+    resolved, changes = names_stage.check(resolved, known, evidence, log=log, counters=counters)
+    report.skipped = [c.subject for c in changes if c.change == "subject_skipped"]
+    artifact("names.json", [c.to_dict() for c in changes])
+    if changes:
+        log(f"names: {len(changes)} unbacked names fixed, {len(report.skipped)} subjects skipped")
+
     # -- plan ------------------------------------------------------------------------------
     plans = plan_stage.plan(resolved, ws, owner=pkt.title, counters=counters)
     artifact("plan.json", [p.to_dict() for p in plans])
@@ -289,7 +303,8 @@ def integrate(
 
     # -- abbreviations, autolink, source page list ------------------------------------------------
     touched = [r.path for r in written]
-    _strip_expansions(ws, vault, [*touched, source_path], pkt.text, counters)
+    evidence_text = f"{pkt.title}\n{pkt.text}"
+    _strip_expansions(ws, vault, [*touched, source_path], evidence_text, counters)
     added = autolink_stage.autolink(ws, [*touched, source_path])
     report.autolinks = sum(added.values())
     src_page = ws.read_page(source_path)
@@ -474,6 +489,9 @@ def render_report(r: Report) -> str:
         "",
         *(f"- {k}: {v}" for k, v in sorted(r.counters.items())),
     ]
+    if r.skipped:
+        lines += ["", "## Skipped subjects (none of their names is in the source)", ""]
+        lines += [f"- {name}" for name in r.skipped]
     if r.rejected:
         lines += ["", "## Rejected edits", ""]
         lines += [f"- `{x['page']}`: {x['reason']}" for x in r.rejected]

@@ -8,9 +8,10 @@ import pytest
 
 from mneme_wiki import cli
 from mneme_wiki import frontmatter as fm
-from mneme_wiki.integrate import IntegrateError, integrate
+from mneme_wiki.integrate import IntegrateError, _strip_expansions, integrate
 from mneme_wiki.lint import lint
 from mneme_wiki.vault import Vault, init_vault
+from mneme_wiki.workspace import Workspace
 
 from .conftest import FIXTURES
 from .fakes import Toy, fake_llm
@@ -187,6 +188,47 @@ def test_invented_expansions_never_reach_the_vault(vault: Vault) -> None:
     ):
         assert invented not in pages
     assert "uses the DAR" in pages and "The DAR helps." in pages
+
+
+class NameInventing(Toy):
+    """Glues an invented expansion onto an acronym, as qwen3:14b did (#25)."""
+
+    def extract(self, user: str) -> dict:
+        answer = super().extract(user)
+        for s in answer["subjects"]:
+            if s["name"] == "UPC":
+                s["name"] = "UPCUplink Processing Centre"
+                s["aliases"] = ["UPC", "Uplink Processing Centre"]
+                s["description"] = "The UPC (Uplink Processing Centre) receives command products."
+        return answer
+
+
+def test_invented_title_and_alias_never_reach_the_vault(vault: Vault) -> None:
+    report, _ = run(vault, "uplink-handover", NameInventing(kinds={**KINDS, "UPC": "entity"}))
+    assert report.ok
+    assert "entities/upc.md" in report.created
+    assert not any("uplink-processing" in rel for rel in vault.files())
+    page = vault.read_page("entities/upc.md")
+    assert page.title == "UPC"
+    assert "Uplink Processing Centre" not in vault.read_text("entities/upc.md")
+    assert "The UPC receives command products." in page.body
+    assert report.counters["title_unbacked_replaced"] == 1
+    assert report.counters["alias_unbacked_dropped"] == 1
+    # a title the source spells out stays, with its acronym as alias
+    rocc = vault.read_page("entities/rover-operations-control-centre.md")
+    assert rocc.title == "Rover Operations Control Centre" and rocc.meta["aliases"] == ["ROCC"]
+
+
+def test_a_new_pages_own_names_are_no_expansion_evidence(vault: Vault) -> None:
+    ws = Workspace(vault)
+    rel = "entities/uplink-processing-centre.md"
+    ws.write_text(rel, "---\ntitle: Uplink Processing Centre\ntype: entity\naliases: [UPC]\n"
+                       "---\n# Uplink Processing Centre\n\nThe UPC (Uplink Processing Centre) "
+                       "receives commands.\n")  # fmt: skip
+    counters: dict[str, int] = {}
+    _strip_expansions(ws, vault, [rel], "The ROCC sends commands to UPC.", counters)
+    assert "The UPC receives commands." in ws.read_text(rel)
+    assert counters["expansion_removed"] == 1
 
 
 def test_expansions_already_in_the_vault_stay(vault: Vault) -> None:
