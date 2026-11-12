@@ -2,7 +2,9 @@
 
 For each subject, in order:
 1. exact match of the subject's *name* against the titles and aliases of existing
-   pages and the names of subjects of this source already kept as new (code);
+   pages and the names of subjects of this source already kept as new (code). A name
+   that looks like a document-local id (`WP2`, `D3`; #13) only matches subjects of
+   this source exactly; an existing page with that name becomes a candidate instead;
 2. candidates (code): first every page or subject that shares a name only through an
    alias (#15: the model lists related names as aliases, so such a match is not
    proof), then name shape (one name contains the other, or is its initialism), then
@@ -27,7 +29,7 @@ from dataclasses import asdict, dataclass, field
 from ..llm import LLM
 from ..prompts import load_prompt
 from ..search import Doc, SearchIndex
-from .common import KnownPage, Subject, initials, name_key, unique
+from .common import KnownPage, Subject, initials, looks_local_id, name_key, unique
 
 MAX_CANDIDATES = 4
 MAX_BM25_CANDIDATES = 2
@@ -57,7 +59,7 @@ class Check:
     candidate: str
     same: bool
     reason: str
-    via: str  # alias | shape | bm25
+    via: str  # local-id | alias | shape | bm25
 
 
 @dataclass
@@ -138,37 +140,43 @@ class _Pool:
                 self.by_alias.setdefault(key, cid)
 
     def exact(self, subject: Subject) -> str | None:
-        return self.by_name.get(name_key(subject.name))
+        cid = self.by_name.get(name_key(subject.name))
+        if cid and looks_local_id(subject.name) and not cid.startswith("new:"):
+            return None  # a local id of another document: ask, don't assume (#13)
+        return cid
 
-    def alias_hits(self, subject: Subject) -> list[Candidate]:
-        """Pages/subjects sharing a name with `subject` through an alias on either side."""
-        out: list[str] = []
+    def forced(self, subject: Subject) -> list[tuple[Candidate, str]]:
+        """Pages/subjects that share a name with `subject` without an exact match: a
+        local id of another source, or a name shared through an alias on either side."""
+        out: dict[str, str] = {}
+        name = name_key(subject.name)
         for key in map(name_key, subject.names()):
             for cid in (self.by_name.get(key), self.by_alias.get(key)):
                 if cid and cid not in out:
-                    out.append(cid)
-        return [self.cands[cid] for cid in out]
+                    local = key == name and cid == self.by_name.get(key)
+                    out[cid] = "local-id" if local else "alias"
+        return [(self.cands[cid], via) for cid, via in out.items()]
 
     def candidates(self, subject: Subject) -> list[tuple[Candidate, str]]:
         """Alias matches first, then name-shape matches (best BM25 score first), then up
         to MAX_BM25_CANDIDATES BM25-only matches; at most MAX_CANDIDATES in total."""
         if not self.cands:
             return []
-        forced = self.alias_hits(subject)
+        forced = self.forced(subject)
         names = subject.names()
         index = SearchIndex(
             Doc(c.id, c.title, c.kind, tuple(c.aliases), c.description, "")
             for c in self.cands.values()
         )
         scores = {h.path: h.score for h in index.search(" ".join(names), limit=len(self.cands))}
-        seen = {c.id for c in forced}
+        seen = {c.id for c, _ in forced}
         shaped = [
             c
             for c in self.cands.values()
             if c.id not in seen and shape_match(names, [c.title, *c.aliases])
         ]
         shaped.sort(key=lambda c: -scores.get(c.id, 0.0))
-        found = [(c, "alias") for c in forced] + [(c, "shape") for c in shaped]
+        found = forced + [(c, "shape") for c in shaped]
         seen |= {c.id for c in shaped}
         ranked = sorted(scores.items(), key=lambda kv: -kv[1])
         extra = [cid for cid, s in ranked if s >= BM25_MIN_SCORE and cid not in seen]

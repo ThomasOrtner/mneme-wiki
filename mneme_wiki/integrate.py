@@ -246,7 +246,7 @@ def integrate(
         return stop("resolve", [r.to_dict() for r in resolved])
 
     # -- plan ------------------------------------------------------------------------------
-    plans = plan_stage.plan(resolved, ws)
+    plans = plan_stage.plan(resolved, ws, counters=counters)
     artifact("plan.json", [p.to_dict() for p in plans])
     lap("plan")
     n_new = sum(p.new for p in plans)
