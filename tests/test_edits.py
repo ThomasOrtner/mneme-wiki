@@ -248,3 +248,14 @@ def test_lead_citing_only_this_source_may_be_rewritten() -> None:
     new = "P is a research project with four partners ([[sources/proposal-b]])."
     r = edits.apply(body, prop(lead=new), CTX_B)
     assert r.changed and not r.rejected and r.body == f"\n# P\n\n{new}\n"
+
+
+def test_lead_lines_lose_their_list_marks() -> None:
+    # #22 run: the model extended a lead with "\n- <new sentence>"; joined, the "-" ended
+    # up mid-paragraph
+    lead = (
+        "Project Alpha is a research project ([[sources/proposal-a]]).\n"
+        "- It was extended by one year ([[sources/proposal-b]])."
+    )
+    r = edits.apply(SCHEDULE, prop(lead=lead), CTX_B)
+    assert r.changed and lead.replace("\n- ", " ") in r.body

@@ -37,6 +37,7 @@ FACT_MIN_WORDS = 4
 DEFAULT_SECTION = "Notes"
 
 _FENCE = re.compile(r"^[ \t]{0,3}(`{3,}|~{3,})")
+_LIST_MARK = re.compile(r"^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+")
 _H2 = re.compile(r"^##[ \t]+(.+?)[ \t#]*$")
 _H1_OR_H2 = re.compile(r"^[ \t]{0,3}#{1,2}[ \t]+(.+?)[ \t#]*$")
 _LIST_ITEM = re.compile(r"^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+\S")
@@ -381,7 +382,8 @@ def _apply_lead(
 ) -> Rejection | None:
     new = clean_text(lead, None, counters) if lead.strip() else ""
     new = re.split(r"\n\s*\n", new, maxsplit=1)[0] if new else ""
-    new = " ".join(ln.strip() for ln in new.split("\n") if ln.strip())
+    # a lead is prose: list marks the model put on its lines would end up mid-sentence
+    new = " ".join(_LIST_MARK.sub("", ln).strip() for ln in new.split("\n") if ln.strip())
     pre_text = "\n".join(parts.pre)
     block = text.lead(pre_text)
     old = block.text if block else ""
