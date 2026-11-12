@@ -26,7 +26,7 @@ How agents use this file: [AGENTS.md § 7](../AGENTS.md#7-workflow).
 |---|---|---|---|
 | 0 | Docs that explain what the pipeline does | PR #18 | – |
 | 1 | Stop wrong merges and invented content at the source | #15, #13, #22, #25 | p1 |
-| 2 | Vault-specific knowledge | #24, #14, #16 | p2 |
+| 2 | Vault-specific knowledge | #24, #27, #14, #16 | p2 |
 | 3 | Keep pages up to date, see the vault | #20, #23, #19, #17 | p3 |
 | 4 | Repair what is already in a vault | #6, #3 | p4 |
 | Later | Independent infrastructure | #5, #10, #7, #9, #4, #2 | p4 |
@@ -45,7 +45,7 @@ or rename (phase 4), so this goes first. #15 and #13 share one root cause: resol
       alias goes to the yes/no check. Extract prompt: aliases are other names for the
       same thing only. Drop aliases that are another page's name. The kind guard (its
       fix 2) moves to #16.
-- [ ] **#13**, cut down to option 1 (prompt rules; local ids like "WP2" never skip the
+- [x] **#13**, cut down to option 1 (prompt rules; local ids like "WP2" never skip the
       check) plus option 3 (producer advice in `docs/wiki/Source-Packets.md`). Option 2
       (`part_of`) moves to #16. Stacked on #15.
 - [ ] **#22** (bug, from #13's notes): a `replace` can keep a claim's
@@ -70,6 +70,10 @@ knows, so that names which mean one thing end up on one page.
       needs no prompt rules and helps most in acronym-heavy vaults. It goes first: #14
       and #16 can build on its file and parser. It builds on #15 (curated aliases are
       trusted, model aliases are checked).
+- [ ] **#27** a source declares its project (`source.meta.json` `project`, or
+      `integrate --project`); code expands its bare local ids (`WP2`) to that project, so
+      a later report finds the proposal's pages by exact match. Small, builds on #13; the
+      packet-level form of #16's scoped kinds, so #16 can later use it as the owner.
 - [ ] **#14** domain rules: a `## Domain rules` section in `WIKI.md` that extract and
       resolve read. Simplest home for the vault-specific local-id patterns of #13.
 - [ ] **#16** ontology, first version = kinds + scoped kinds. Takes over #13 option 2
