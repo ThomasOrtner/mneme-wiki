@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from mneme_wiki import links
 from mneme_wiki.packet import Chunk
-from mneme_wiki.stages import autolink, extract, plan, resolve
+from mneme_wiki.stages import autolink, extract, names, plan, resolve
 from mneme_wiki.stages.common import (
     Claim,
     KnownPage,
@@ -305,6 +305,51 @@ NAMES = [
     autolink.Name("Plan", "concepts/plan.md"),
 ]
 INDEX = links.LinkIndex(["concepts/activity-plan.md", "entities/rocc.md", "concepts/plan.md"])
+
+
+# -- names (#25) --------------------------------------------------------------------------
+def test_names_normalise_case_hyphens_and_plurals() -> None:
+    ev = names.Evidence("Two Activity-Plans per sol; the ROCC's team.", [])
+    assert ev.backs("Activity Plan") and ev.backs("activity plans") and ev.backs("ROCC")
+    assert not ev.backs("Plan Activity")  # reordered
+    assert not ev.backs("ActivityPlan")  # glued
+    assert not ev.backs("")
+
+
+def test_names_keep_backed_title_and_replace_an_invented_one() -> None:
+    ev = names.Evidence("The ROCC delivers the command products to UPC for uplink.", [])
+    r = resolve.Resolved(subj("UPCUplink Processing Centre", "UPC", "Uplink Processing Centre"),
+                         None, "new")  # fmt: skip
+    counters: dict[str, int] = {}
+    kept, changes = names.check([r], [], ev, counters=counters)
+    assert kept[0].subject.name == "UPC" and kept[0].subject.aliases == []
+    assert counters == {"alias_unbacked_dropped": 1, "title_unbacked_replaced": 1}
+    assert [c.change for c in changes] == ["alias_dropped", "title_replaced"]
+
+
+def test_names_existing_page_names_are_evidence() -> None:
+    known = [page("entities/rocc.md", "Rover Operations Control Centre", "ROCC")]
+    ev = names.Evidence("The ROCC plans the sol.", known)
+    r = resolve.Resolved(subj("Rover Operations Control Centre", "ROCC"), None, "new")
+    kept, changes = names.check([r], known, ev)
+    assert kept[0].subject.name == "Rover Operations Control Centre" and not changes
+
+
+def test_names_unbacked_name_of_a_matched_subject_is_not_added_to_the_page() -> None:
+    known = [page("entities/rocc.md", "Rover Operations Control Centre", "ROCC")]
+    ev = names.Evidence("The ROCC plans the sol.", known)
+    r = resolve.Resolved(subj("Rover Orbit Command Centre"), "entities/rocc.md", "llm")
+    kept, _ = names.check([r], known, ev)
+    assert kept[0].subject.name == "Rover Operations Control Centre"
+
+
+def test_names_subject_without_a_backed_name_is_skipped() -> None:
+    ev = names.Evidence("Nothing relevant here.", [])
+    r = resolve.Resolved(subj("Data Archive Room", "Data Archive and Retrieval"), None, "new")
+    counters: dict[str, int] = {}
+    kept, changes = names.check([r], [], ev, counters=counters)
+    assert kept == [] and changes[-1].change == "subject_skipped"
+    assert counters["subject_unbacked_skipped"] == 1
 
 
 def test_autolink_rules() -> None:
