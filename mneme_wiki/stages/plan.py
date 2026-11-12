@@ -28,27 +28,41 @@ class PagePlan:
 
 
 def plan(
-    resolved: list[Resolved], vault: Vault, *, counters: dict[str, int] | None = None
+    resolved: list[Resolved],
+    vault: Vault,
+    *,
+    owner: str = "",
+    counters: dict[str, int] | None = None,
 ) -> list[PagePlan]:
     """One PagePlan per page to write, in first-seen order. Subjects without claims
     produce nothing. A new page whose slug is taken by an unrelated page (or differs
-    only in case from one) gets `-2`, `-3`, … appended. Local-id aliases are
-    qualified with their owner or dropped (#13 D3)."""
+    only in case from one) gets `-2`, `-3`, … appended.
+
+    Document-local ids (#13): a new page is never titled with a bare local id; it gets
+    `owner` (the source's title) in front ("Project Beta Proposal D1"). Local-id aliases
+    are qualified with their owner's short name or dropped (D3)."""
+    counters = counters if counters is not None else {}
     plans: dict[str, PagePlan] = {}
     for r in resolved:
         s = r.subject
         if not s.claims:
             continue
+        title = s.name
         if r.target:
             path, new = r.target, False
         else:
-            path, new = _new_path(vault, s.kind, s.name, taken=plans), True
+            if owner and looks_local_id(s.name):
+                title = f"{owner} {s.name}"
+                counters["local_id_title_qualified"] = (
+                    counters.get("local_id_title_qualified", 0) + 1
+                )
+            path, new = _new_path(vault, s.kind, title, taken=plans), True
         entry = plans.get(path)
         if entry is None:
             entry = plans[path] = PagePlan(
                 path=path,
                 new=new,
-                title=s.name,
+                title=title,
                 kind=s.kind,
                 entity_kind=s.entity_kind,
                 aliases=[],
@@ -57,10 +71,11 @@ def plan(
         # For an existing page the subject's name may be new to it, so it becomes an
         # alias; patch drops the ones the page (or another page) already has.
         names = s.aliases if new and entry.title == s.name else [s.name, *s.aliases]
+        # (a qualified title keeps the bare id as an alias here; D3 below drops it)
         entry.aliases = unique([*entry.aliases, *names], exclude=[entry.title] if new else [])
         entry.claims.extend(s.claims)
     out = list(plans.values())
-    _qualify_local_ids(out, vault, counters if counters is not None else {})
+    _qualify_local_ids(out, vault, counters)
     return out
 
 

@@ -1,6 +1,6 @@
 # Project Beta Proposal
 
-Project Beta defines the requirements for a new ground segment for planetary missions. It runs from 2025 to 2027 and is coordinated by the Beta Systems Group.
+Project Beta (PB) defines the requirements for a new ground segment for planetary missions. It runs from 2025 to 2027 and is coordinated by the Beta Systems Group.
 
 ## Work Plan
 

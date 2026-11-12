@@ -256,6 +256,26 @@ def test_plan_qualifies_local_id_aliases(fixture_vault) -> None:
     assert counters == {"local_id_alias_dropped": 3, "local_id_alias_qualified": 2}
 
 
+def test_plan_qualifies_a_bare_local_id_title_with_the_source(fixture_vault) -> None:
+    # #13: extract may ignore the rule and name a subject "D1"; a new page is never titled
+    # with a bare local id, so another project's "D1" page can't collide with it
+    v = Vault(fixture_vault("clean"))
+    resolved = [
+        resolve.Resolved(subj("D1", kind="entity"), None, "new"),
+        resolve.Resolved(subj("Project Beta", "PB", kind="entity"), None, "new"),
+    ]
+    counters: dict[str, int] = {}
+    plans = plan.plan(resolved, v, owner="Project Beta Proposal", counters=counters)
+    assert (plans[0].path, plans[0].title) == (
+        "entities/project-beta-proposal-d1.md",
+        "Project Beta Proposal D1",
+    )
+    assert plans[0].aliases == []  # bare "D1" dropped, the owner has no short name
+    assert counters["local_id_title_qualified"] == 1
+    # without an owner the title stays as it is
+    assert plan.plan(resolved[:1], v)[0].title == "D1"
+
+
 def test_plan_takes_owner_short_name_from_an_existing_page(fixture_vault) -> None:
     v = Vault(fixture_vault("clean"))
     owner = "entities/rover-operations-control-centre.md"  # aliases: [ROCC]

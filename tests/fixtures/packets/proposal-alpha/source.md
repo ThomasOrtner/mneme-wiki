@@ -1,6 +1,6 @@
 # Project Alpha Proposal
 
-Project Alpha builds a processing chain for rover images. It runs from 2024 to 2026 and is coordinated by the Alpha Imaging Lab.
+Project Alpha (PA) builds a processing chain for rover images. It runs from 2024 to 2026 and is coordinated by the Alpha Imaging Lab.
 
 ## Work Plan
 
