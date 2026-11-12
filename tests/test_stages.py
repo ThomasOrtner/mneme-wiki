@@ -3,7 +3,15 @@ from __future__ import annotations
 from mneme_wiki import links
 from mneme_wiki.packet import Chunk
 from mneme_wiki.stages import autolink, extract, plan, resolve
-from mneme_wiki.stages.common import Claim, KnownPage, Subject, initials, name_key, unique
+from mneme_wiki.stages.common import (
+    Claim,
+    KnownPage,
+    Subject,
+    initials,
+    looks_local_id,
+    name_key,
+    unique,
+)
 from mneme_wiki.vault import Vault
 
 from .fakes import Toy, fake_llm
@@ -27,6 +35,14 @@ def test_name_key_and_initials() -> None:
     assert initials("Regions of Interest") == {"ri", "roi"}
     assert initials("MMGIS") == set()
     assert unique(["A b", "a  B", "", "c"], exclude=["C"]) == ["A b"]
+
+
+def test_looks_local_id() -> None:
+    # #13 D1: short, uppercase letters + digits = may be local to one document
+    for name in ["WP2", "D3", "MS3", "AP4", "WP 2", "T2.1", "D1.2a"]:
+        assert looks_local_id(name), name
+    for name in ["ROCC", "PRo3D", "3D", "Probe Alpha WP2", "COVID19", "Task", "H2O", ""]:
+        assert not looks_local_id(name), name
 
 
 def test_shape_match() -> None:
@@ -59,11 +75,22 @@ def test_parse_subjects_validates_and_clips() -> None:
 
 def test_merge_within_source() -> None:
     a = subj("Target Keeper", "TK", claims=["One."])
-    b = subj("TK", claims=["Two.", "One."])
+    b = subj("Target Keepers", "Keeper", claims=["Two.", "One."])
     c = subj("Target", claims=["Three."])
     merged = extract.merge_within_source([a, b, c])
     assert [m.name for m in merged] == ["Target Keeper", "Target"]
     assert [x.text for x in merged[0].claims] == ["One.", "Two."]
+    assert merged[0].aliases == ["TK", "Keeper"]  # "Target Keepers" is the name itself
+
+
+def test_merge_within_source_never_unions_through_an_alias() -> None:
+    # #15: a related name listed as an alias must not fold two subjects without a check
+    mission = subj("Probe Alpha", "PA", "Rover A", claims=["Mission."])
+    rover = subj("Rover A", claims=["Rover."])
+    tk = subj("TK", claims=["Two."])
+    keeper = subj("Target Keeper", "TK", claims=["One."])
+    merged = extract.merge_within_source([mission, rover, tk, keeper])
+    assert [m.name for m in merged] == ["Probe Alpha", "Rover A", "TK", "Target Keeper"]
 
 
 def test_known_for_chunk_prefers_mentioned_pages() -> None:
@@ -105,6 +132,88 @@ def test_resolve_exact_pairwise_and_in_source() -> None:
     assert all(r["thinking"] for r in backend.requests)  # resolve always thinks
 
 
+def test_resolve_alias_match_is_checked_not_exact() -> None:
+    # #15: the subject's alias "Cam B" names an existing page; that is no exact match
+    pages = [page("entities/cam-b.md", "Cam B", desc="A camera of another mission.",
+                  type_="entity")]  # fmt: skip
+    llm, backend = fake_llm(Toy())  # the model says "different"
+    mission = subj("Probe Alpha", "PA", "Rover A", "Cam A", "Cam B", kind="entity")
+    counters: dict[str, int] = {}
+    resolved, decisions = resolve.resolve(llm, [mission], pages, counters=counters)
+    assert [(r.subject.name, r.target, r.how) for r in resolved] == [("Probe Alpha", None, "new")]
+    assert decisions[0].how == "new" and decisions[0].checks[0].candidate == "Cam B"
+    assert decisions[0].checks[0].via == "alias"
+    assert len(backend.requests) == 1  # one yes/no question, then "new"
+    # the alias that is another page's title is dropped and counted
+    assert resolved[0].subject.aliases == ["PA", "Rover A", "Cam A"]
+    assert counters["alias_conflict_dropped"] == 1
+
+
+def test_resolve_alias_match_merges_when_the_model_says_same() -> None:
+    pages = [page("entities/rocc.md", "Rover Operations Control Centre", "ROCC", type_="entity")]
+    llm, _ = fake_llm(Toy(same=[("Ops Centre", "Rover Operations Control Centre")]))
+    resolved, decisions = resolve.resolve(llm, [subj("Ops Centre", "ROCC")], pages)
+    assert [(r.target, r.how) for r in resolved] == [("entities/rocc.md", "llm")]
+    assert decisions[0].checks[0].via == "alias"
+    assert resolved[0].subject.aliases == ["ROCC"]  # its own page's alias is kept
+
+
+def test_resolve_within_source_alias_is_checked_not_folded() -> None:
+    # #15: a subject whose alias is another subject's name is not folded without a check
+    llm, backend = fake_llm(Toy())
+    mission = subj("Probe Alpha", "Rover A", kind="entity", claims=["Mission."])
+    rover = subj("Rover A", kind="entity", claims=["Rover."])
+    counters: dict[str, int] = {}
+    resolved, decisions = resolve.resolve(llm, [mission, rover], [], counters=counters)
+    assert [(r.subject.name, r.target, r.how) for r in resolved] == [
+        ("Probe Alpha", None, "new"),
+        ("Rover A", None, "new"),
+    ]
+    assert decisions[1].checks[0].candidate == "Probe Alpha"
+    assert decisions[1].checks[0].via == "alias"
+    # the mission's alias is now another new page's name: dropped
+    assert resolved[0].subject.aliases == []
+    assert counters["alias_conflict_dropped"] == 1
+
+
+def test_resolve_within_source_alias_folds_when_the_model_says_same() -> None:
+    llm, _ = fake_llm(Toy(same=[("ROCC", "Rover Operations Control Centre")]))
+    full = subj("Rover Operations Control Centre", "ROCC", kind="entity", claims=["A."])
+    short = subj("ROCC", kind="entity", claims=["B."])
+    resolved, decisions = resolve.resolve(llm, [full, short], [])
+    assert len(resolved) == 1 and [c.text for c in resolved[0].subject.claims] == ["A.", "B."]
+    assert decisions[1].how == "llm"
+    assert decisions[1].target == "this source: Rover Operations Control Centre"
+
+
+def test_resolve_local_id_from_another_source_is_checked_not_exact() -> None:
+    # #13: a bare "WP2" of source B never exact-matches the "WP2" page of source A
+    pages = [page("entities/wp2.md", "WP2", desc="Data Processing work package of Alpha.")]
+    llm, backend = fake_llm(Toy())  # the model says "different"
+    wp2 = subj("WP2", desc="Requirements Consolidation work package of Beta.")
+    resolved, decisions = resolve.resolve(llm, [wp2], pages)
+    assert [(r.target, r.how) for r in resolved] == [(None, "new")]
+    assert decisions[0].checks[0].candidate == "WP2"
+    assert decisions[0].checks[0].via == "local-id"
+    assert len(backend.requests) == 1
+
+
+def test_resolve_local_id_merges_when_the_model_says_same() -> None:
+    pages = [page("entities/wp2.md", "WP2", "Alpha WP2")]
+    llm, _ = fake_llm(Toy(same=[("WP2", "WP2")]))
+    resolved, _ = resolve.resolve(llm, [subj("WP2")], pages)
+    assert [(r.target, r.how) for r in resolved] == [("entities/wp2.md", "llm")]
+
+
+def test_resolve_local_id_within_source_is_still_exact() -> None:
+    # inside one document a local id names one thing: no model call
+    llm, backend = fake_llm(Toy())
+    first, again = subj("WP2", claims=["A."]), subj("WP2", claims=["B."])
+    resolved, decisions = resolve.resolve(llm, [first, again], [])
+    assert len(resolved) == 1 and decisions[1].how == "exact"
+    assert backend.requests == []
+
+
 def test_resolve_caps_candidates() -> None:
     pages = [page(f"concepts/target-{i}.md", f"Target {i}") for i in range(10)]
     llm, backend = fake_llm(Toy())
@@ -127,6 +236,66 @@ def test_plan_paths_and_aliases(fixture_vault) -> None:
     ]
     assert plans[0].aliases == ["Ops Centre"]
     assert plans[1].aliases == ["Activity Plan", "AP"]
+
+
+def test_plan_qualifies_local_id_aliases(fixture_vault) -> None:
+    # #13 D3: a local id is never a bare alias; with an owner short name it becomes PA-WP2
+    v = Vault(fixture_vault("clean"))
+    resolved = [
+        resolve.Resolved(subj("Project Alpha", "PA", kind="entity"), None, "new"),
+        resolve.Resolved(subj("Project Alpha WP2", "WP2", kind="entity"), None, "new"),
+        resolve.Resolved(subj("Project Alpha D3: Viewer", "D3", kind="entity"), None, "new"),
+        resolve.Resolved(subj("Project Beta WP2", "WP2", "Beta WP", kind="entity"), None, "new"),
+        # no owner in front of the id in the title: no evidence it is local, alias kept
+        resolve.Resolved(subj("Probe 2031", "P31", kind="entity"), None, "new"),
+    ]
+    counters: dict[str, int] = {}
+    plans = plan.plan(resolved, v, counters=counters)
+    aliases = {p.title: p.aliases for p in plans}
+    assert aliases["Project Alpha WP2"] == ["PA-WP2"]
+    assert aliases["Project Alpha D3: Viewer"] == ["PA-D3"]
+    assert aliases["Project Beta WP2"] == ["Beta WP"]  # no short name for Beta: dropped
+    assert aliases["Probe 2031"] == ["P31"]
+    assert counters == {"local_id_alias_dropped": 3, "local_id_alias_qualified": 2}
+
+
+def test_plan_qualifies_a_colliding_local_id_title_with_the_source(fixture_vault) -> None:
+    # #13: extract may leave "D1" bare in two proposals; resolve keeps them apart, and the
+    # second page gets the source title in front instead of a duplicate title "D1"
+    root = fixture_vault("clean")
+    (root / "entities" / "d1.md").write_text(
+        "---\ntitle: D1\ntype: entity\nentity_kind: document\n---\n\n# D1\n\nA.\n",
+        encoding="utf-8",
+    )
+    v = Vault(root)
+    resolved = [resolve.Resolved(subj("D1", kind="entity"), None, "new")]
+    counters: dict[str, int] = {}
+    plans = plan.plan(resolved, v, owner="Project Beta Proposal", counters=counters)
+    assert (plans[0].path, plans[0].title) == (
+        "entities/project-beta-proposal-d1.md",
+        "Project Beta Proposal D1",
+    )
+    assert plans[0].aliases == []  # bare "D1" dropped, the owner has no short name
+    assert counters["local_id_title_qualified"] == 1
+
+
+def test_plan_keeps_a_local_id_shaped_title_without_a_collision(fixture_vault) -> None:
+    # "M20"-style names can be global (a mission acronym): renamed only on a collision
+    v = Vault(fixture_vault("clean"))
+    resolved = [resolve.Resolved(subj("P31", kind="entity"), None, "new")]
+    counters: dict[str, int] = {}
+    plans = plan.plan(resolved, v, owner="Probe Overview", counters=counters)
+    assert (plans[0].path, plans[0].title) == ("entities/p31.md", "P31")
+    assert counters == {}
+
+
+def test_plan_takes_owner_short_name_from_an_existing_page(fixture_vault) -> None:
+    v = Vault(fixture_vault("clean"))
+    resolved = [
+        resolve.Resolved(subj("Rover Operations Control Centre T2.1", "T2.1"), None, "new"),
+    ]
+    plans = plan.plan(resolved, v)
+    assert plans[0].aliases == ["ROCC-T2.1"]
 
 
 # -- autolink ------------------------------------------------------------------------

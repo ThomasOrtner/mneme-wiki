@@ -4,7 +4,7 @@ The model sees one chunk plus a short list of known page titles (pages mentioned
 the chunk, the best BM25 matches, and subjects found earlier in this source), so it
 can reuse an existing name: the cheapest form of entity resolution. Locators come
 from the chunk, never from the model. Output is validated and clipped here (L-3);
-subjects from different chunks with a shared name or alias are merged by code.
+subjects from different chunks with the same name are merged by code.
 """
 
 from __future__ import annotations
@@ -154,12 +154,15 @@ def extract(
 
 
 def merge_within_source(subjects: list[Subject]) -> list[Subject]:
-    """Union subjects that share a normalised name or alias (code, no model)."""
+    """Union subjects with the same normalised *name* (code, no model).
+
+    A shared alias is not enough (#15): the model lists related names (a mission's
+    rover, a sibling camera) as aliases, so a match through an alias goes to resolve's
+    yes/no check instead."""
     groups: list[Subject] = []
     key_to_group: dict[str, int] = {}
     for s in subjects:
-        keys = {name_key(n) for n in s.names()} - {""}
-        hit = next((key_to_group[k] for k in keys if k in key_to_group), None)
+        hit = key_to_group.get(name_key(s.name))
         if hit is None:
             groups.append(
                 Subject(s.name, s.kind, s.entity_kind, list(s.aliases), s.description,
@@ -173,8 +176,7 @@ def merge_within_source(subjects: list[Subject]) -> list[Subject]:
             g.chunks.extend(c for c in s.chunks if c not in g.chunks)
             if g.entity_kind == "other" and s.entity_kind != "other":
                 g.entity_kind = s.entity_kind
-        for k in keys:
-            key_to_group.setdefault(k, hit)
+        key_to_group.setdefault(name_key(s.name), hit)
     for g in groups:
         g.claims = _dedupe_claims(g.claims)
     return groups

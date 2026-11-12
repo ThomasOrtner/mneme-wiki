@@ -1,11 +1,19 @@
 """Stage 3b, resolve: does a subject already have a page? (TD-18)
 
 For each subject, in order:
-1. exact match of any normalised name/alias against existing pages *and* subjects of
-   this source already kept as new (code);
-2. candidates (code): name shape first (one name contains the other, or is its
-   initialism), then BM25 over names + description; at most MAX_CANDIDATES;
+1. exact match of the subject's *name* against the titles and aliases of existing
+   pages and the names of subjects of this source already kept as new (code). A name
+   that looks like a document-local id (`WP2`, `D3`; #13) only matches subjects of
+   this source exactly; an existing page with that name becomes a candidate instead;
+2. candidates (code): first every page or subject that shares a name only through an
+   alias (#15: the model lists related names as aliases, so such a match is not
+   proof), then name shape (one name contains the other, or is its initialism), then
+   BM25 over names + description; at most MAX_CANDIDATES;
 3. one pairwise yes/no call per candidate, with thinking; the first "same" wins.
+
+Finally, an alias that is the title or alias of another page (or the name of another
+new subject) is dropped and counted (`alias_conflict_dropped`): it would make a
+`duplicate-name` and send later exact matches to the wrong page.
 
 M0 showed that picking one of several candidates either never merged (strict
 prompt) or merged anything related (loose prompt); pairwise + thinking had no false
@@ -21,7 +29,7 @@ from dataclasses import asdict, dataclass, field
 from ..llm import LLM
 from ..prompts import load_prompt
 from ..search import Doc, SearchIndex
-from .common import KnownPage, Subject, initials, name_key, unique
+from .common import KnownPage, Subject, initials, looks_local_id, name_key, unique
 
 MAX_CANDIDATES = 4
 MAX_BM25_CANDIDATES = 2
@@ -51,7 +59,7 @@ class Check:
     candidate: str
     same: bool
     reason: str
-    via: str  # shape | bm25
+    via: str  # local-id | alias | shape | bm25
 
 
 @dataclass
@@ -99,55 +107,77 @@ def shape_match(names_a: list[str], names_b: list[str]) -> bool:
 
 
 class _Pool:
-    """Existing pages + subjects of this source kept as new, with an exact-name map."""
+    """Existing pages + subjects of this source kept as new, with two name maps.
+
+    `by_name` holds names an exact match may trust: page titles and aliases, and the
+    names of new subjects (and of subjects folded into them). `by_alias` holds the
+    model's aliases of new subjects, which are unchecked (#15)."""
 
     def __init__(self, pages: list[KnownPage]) -> None:
         self.cands: dict[str, Candidate] = {}
-        self.by_key: dict[str, str] = {}
+        self.by_name: dict[str, str] = {}
+        self.by_alias: dict[str, str] = {}
         self.new: dict[str, Subject] = {}
         for p in pages:
-            self._add(Candidate(p.path, p.title, list(p.aliases), p.description, p.type))
-
-    def _add(self, cand: Candidate) -> None:
-        self.cands[cand.id] = cand
-        for n in [cand.title, *cand.aliases]:
-            key = name_key(n)
-            if key:
-                self.by_key.setdefault(key, cand.id)
+            self.cands[p.path] = Candidate(p.path, p.title, list(p.aliases), p.description, p.type)
+            self.add_names(p.path, p.names())
 
     def add_new(self, subject: Subject) -> str:
         cid = f"new:{len(self.new)}"
         self.new[cid] = subject
-        self._add(Candidate(cid, subject.name, list(subject.aliases), subject.description,
-                            subject.kind))  # fmt: skip
+        self.cands[cid] = Candidate(
+            cid, subject.name, list(subject.aliases), subject.description, subject.kind
+        )
+        self.add_names(cid, [subject.name], subject.aliases)
         return cid
 
-    def add_names(self, cid: str, names: list[str]) -> None:
+    def add_names(self, cid: str, names: list[str], aliases: list[str] = ()) -> None:
         for n in names:
-            key = name_key(n)
-            if key:
-                self.by_key.setdefault(key, cid)
+            if key := name_key(n):
+                self.by_name.setdefault(key, cid)
+        for a in aliases:
+            if key := name_key(a):
+                self.by_alias.setdefault(key, cid)
 
     def exact(self, subject: Subject) -> str | None:
-        return next(
-            (self.by_key[k] for k in map(name_key, subject.names()) if k in self.by_key), None
-        )
+        cid = self.by_name.get(name_key(subject.name))
+        if cid and looks_local_id(subject.name) and not cid.startswith("new:"):
+            return None  # a local id of another document: ask, don't assume (#13)
+        return cid
+
+    def forced(self, subject: Subject) -> list[tuple[Candidate, str]]:
+        """Pages/subjects that share a name with `subject` without an exact match: a
+        local id of another source, or a name shared through an alias on either side."""
+        out: dict[str, str] = {}
+        name = name_key(subject.name)
+        for key in map(name_key, subject.names()):
+            for cid in (self.by_name.get(key), self.by_alias.get(key)):
+                if cid and cid not in out:
+                    local = key == name and cid == self.by_name.get(key)
+                    out[cid] = "local-id" if local else "alias"
+        return [(self.cands[cid], via) for cid, via in out.items()]
 
     def candidates(self, subject: Subject) -> list[tuple[Candidate, str]]:
-        """Name-shape matches first (best BM25 score first), then up to
-        MAX_BM25_CANDIDATES BM25-only matches; at most MAX_CANDIDATES in total."""
+        """Alias matches first, then name-shape matches (best BM25 score first), then up
+        to MAX_BM25_CANDIDATES BM25-only matches; at most MAX_CANDIDATES in total."""
         if not self.cands:
             return []
+        forced = self.forced(subject)
         names = subject.names()
         index = SearchIndex(
             Doc(c.id, c.title, c.kind, tuple(c.aliases), c.description, "")
             for c in self.cands.values()
         )
         scores = {h.path: h.score for h in index.search(" ".join(names), limit=len(self.cands))}
-        shaped = [c for c in self.cands.values() if shape_match(names, [c.title, *c.aliases])]
+        seen = {c.id for c, _ in forced}
+        shaped = [
+            c
+            for c in self.cands.values()
+            if c.id not in seen and shape_match(names, [c.title, *c.aliases])
+        ]
         shaped.sort(key=lambda c: -scores.get(c.id, 0.0))
-        found = [(c, "shape") for c in shaped]
-        seen = {c.id for c in shaped}
+        found = forced + [(c, "shape") for c in shaped]
+        seen |= {c.id for c in shaped}
         ranked = sorted(scores.items(), key=lambda kv: -kv[1])
         extra = [cid for cid, s in ranked if s >= BM25_MIN_SCORE and cid not in seen]
         found += [(self.cands[cid], "bm25") for cid in extra[:MAX_BM25_CANDIDATES]]
@@ -179,7 +209,7 @@ def resolve(
             target.aliases = unique([*target.aliases, subject.name, *subject.aliases],
                                     exclude=[target.name])  # fmt: skip
             target.claims.extend(subject.claims)
-            pool.add_names(cid, subject.names())
+            pool.add_names(cid, [subject.name], subject.aliases)  # its name is confirmed
             decision.target = f"this source: {target.name}"
             bump(f"resolve_{how}_within_source")
         else:
@@ -217,4 +247,23 @@ def resolve(
             new_resolved[cid] = resolved
             kept.append(resolved)
             bump("resolve_new")
+    own = {id(r): cid for cid, r in new_resolved.items()}
+    for r in kept:
+        _drop_conflicting_aliases(r, r.target or own[id(r)], pool, bump, log)
     return kept, decisions
+
+
+def _drop_conflicting_aliases(
+    r: Resolved, own: str, pool: _Pool, bump: Callable[[str], None], log: Callable[[str], None]
+) -> None:
+    """Drop aliases that are another page's title/alias or another new subject's name."""
+    keep = []
+    for alias in r.subject.aliases:
+        owner = pool.by_name.get(name_key(alias))
+        if owner in (None, own):
+            keep.append(alias)
+        else:
+            bump("alias_conflict_dropped")
+            title = pool.cands[owner].title
+            log(f"    ✗ alias '{alias}' of '{r.subject.name}' dropped: it names '{title}'")
+    r.subject.aliases = keep
