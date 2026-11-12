@@ -51,7 +51,7 @@ or rename (phase 4), so this goes first. #15 and #13 share one root cause: resol
 - [x] **#22** (bug, from #13's notes): a `replace` can keep a claim's
       citation but change its fact to another source's. Validation (L-4) checks that
       links and citations survive, not that a cited fact still says the same thing.
-- [ ] **#25** (bug): extract can invent a page title (glued acronym + made-up
+- [x] **#25** (bug): extract can invent a page title (glued acronym + made-up
       expansion), and new titles and aliases are never checked against the source. Closes
       TD-29's "page titles aren't checked" gap. Independent of #15/#13 in code, but its
       bench check can share their run.
