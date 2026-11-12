@@ -9,7 +9,11 @@ After resolve, every name that would become a **new** title or a **new** alias h
 appear word for word in the evidence: the source (title and text) or the names of
 pages that existed before this run. Matching ignores case, punctuation, whitespace
 and hyphens, and folds a plural "s"; nothing looser, since that would let glued and
-reordered names through (D3).
+reordered names through (D3). One exception (D3, amended 2026-11-12): an *owner name*
+in front of a backed name, "Project Alpha WP2" where the source says "WP2". Extract is
+told to qualify local ids that way (TD-32). An owner name is a page name from before
+the run, a backed name of a subject of this source, or the start (≥ 2 words) of the
+source's title; two arbitrary words of the source are not enough.
 
 - An unbacked alias is dropped (`alias_unbacked_dropped`).
 - An unbacked title of a new page is replaced by the subject's first backed alias
@@ -59,16 +63,39 @@ def _fold(word: str) -> str:
 
 
 class Evidence:
-    """The text a name has to appear in, normalised once."""
+    """The text a name has to appear in, normalised once, plus the names that may stand
+    in front of another backed name as its owner ("Project Alpha" + "WP2")."""
 
     def __init__(self, source_text: str, pages: list[KnownPage], source_title: str = "") -> None:
-        parts = [source_title, source_text, *(n for p in pages for n in p.names())]
+        page_names = [n for p in pages for n in p.names()]
+        parts = [source_title, source_text, *page_names]
         # "|" can't be part of a normalised name, so a name never spans two parts.
         self._text = " " + " | ".join(norm(p) for p in parts) + " "
+        title = norm(source_title).split()
+        self.owners = {norm(n) for n in page_names} | {
+            " ".join(title[:n]) for n in range(2, len(title) + 1)
+        }
+        self.owners.discard("")
+
+    def _found(self, key: str) -> bool:
+        return bool(key) and f" {key} " in self._text
 
     def backs(self, name: str) -> bool:
+        """Word for word in the evidence, or an owner name + a backed name (D3 as amended
+        on 2026-11-12): extract is told to qualify local ids with their owner (TD-32), and
+        the source then only says "WP2"."""
         key = norm(name)
-        return bool(key) and f" {key} " in self._text
+        if self._found(key):
+            return True
+        words = key.split()
+        return any(
+            " ".join(words[:n]) in self.owners and self._found(" ".join(words[n:]))
+            for n in range(1, len(words))
+        )
+
+    def add_owner(self, name: str) -> None:
+        if self.backs(name):
+            self.owners.add(norm(name))
 
 
 def check(
@@ -88,6 +115,9 @@ def check(
     def bump(key: str) -> None:
         counters[key] = counters.get(key, 0) + 1
 
+    for r in resolved:  # this source's own backed names can own others ("Project Alpha")
+        for name in r.subject.names():
+            evidence.add_owner(name)
     for r in resolved:
         s = r.subject
         original = s.name

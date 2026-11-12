@@ -316,6 +316,27 @@ def test_names_normalise_case_hyphens_and_plurals() -> None:
     assert not ev.backs("")
 
 
+def test_names_owner_in_front_of_a_backed_name_is_backed() -> None:
+    """D3 as amended: extract qualifies local ids with their owner (TD-32)."""
+    text = "Project Alpha builds a viewer. WP2 turns images into mosaics. A steering board meets."
+    ev = names.Evidence(text, [], "Project Alpha Proposal")
+    assert ev.backs("Project Alpha WP2")  # owner from the source title
+    assert ev.backs("Project Alpha Steering Board")
+    assert not ev.backs("Mosaics WP2")  # "mosaics" is a word of the source, not a name
+    assert not ev.backs("Project Alpha Deliverable D2")  # "Deliverable D2" isn't in the text
+    ev = names.Evidence("The ROCC delivers to UPC.", [page("e/rocc.md", "ROCC")])
+    assert ev.backs("ROCC UPC")  # owner = an existing page's name
+    assert not ev.backs("UPC Uplink Processing Centre")  # the expansion itself is invented
+
+
+def test_names_a_subject_of_this_source_can_own_another() -> None:
+    ev = names.Evidence("Team Rho runs the lab. WP2 makes mosaics.", [])
+    owner = resolve.Resolved(subj("Team Rho"), None, "new")
+    wp = resolve.Resolved(subj("Team Rho WP2"), None, "new")
+    kept, changes = names.check([wp, owner], [], ev)
+    assert [r.subject.name for r in kept] == ["Team Rho WP2", "Team Rho"] and not changes
+
+
 def test_names_keep_backed_title_and_replace_an_invented_one() -> None:
     ev = names.Evidence("The ROCC delivers the command products to UPC for uplink.", [])
     r = resolve.Resolved(subj("UPCUplink Processing Centre", "UPC", "Uplink Processing Centre"),
