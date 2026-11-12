@@ -68,7 +68,8 @@ The user documentation is a small wiki in [`docs/wiki/`](docs/wiki/Home.md):
 | [Troubleshooting](docs/wiki/Troubleshooting.md) | Common errors and what to do |
 
 Design records: [`AGENTS.md`](AGENTS.md) (requirements, constraints, technical decisions),
-[`docs/plan.md`](docs/plan.md) (MVP plan) and the milestone tutorials in
+[`docs/plan.md`](docs/plan.md) (order of open work), [`docs/archive/mvp-plan.md`](docs/archive/mvp-plan.md)
+(MVP plan) and the milestone tutorials in
 [`docs/milestones/`](docs/milestones/).
 
 ## Status

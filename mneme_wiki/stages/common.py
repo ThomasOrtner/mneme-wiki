@@ -90,6 +90,18 @@ def name_key(name: str) -> str:
     return s[:-1] if s.endswith("s") and len(s) > 4 else s
 
 
+_LOCAL_ID = re.compile(r"[A-Z]{1,4}[ -]?\d+(?:\.\d+)*[a-z]?")
+
+
+def looks_local_id(name: str) -> bool:
+    """A name like `WP2`, `D3`, `MS3`, `AP4`, `T2.1`: 1-4 capitals, then a number (#13).
+
+    Such ids are often unique only inside the document that defines them, so resolve
+    never matches them across sources without a yes/no check. Language-independent on
+    purpose (#13 D1); plain acronyms without a number (`ROCC`) are not affected."""
+    return _LOCAL_ID.fullmatch(name.strip()) is not None
+
+
 def initials(name: str) -> set[str]:
     """Initialisms of `name`, with and without stop words: `Regions of Interest` →
     {`ri`, `roi`}. Names of fewer than two words have none. (The M0 spike only

@@ -37,6 +37,13 @@ in the vault, so a source is never integrated twice.
 - Any language: the `source` page keeps it, all other pages are written in
   `WIKI_LANGUAGE`.
 - At most 2 MB.
+- **Qualify document-local identifiers.** Work packages, deliverables, milestones, tasks
+  and numbered sections (`WP2`, `D3`, `MS1`, `Task 2.1`) are often unique only inside one
+  document. Two proposals that both have a `WP2` are two different things. Write the
+  owner into the heading or the first mention, e.g. `# 2. Data Processing` →
+  `# Project Alpha WP2: Data Processing`. Extract is asked to do the same, and resolve
+  never matches a bare `WP2`-style name to another source's page without a yes/no
+  check, but a qualified source is the most reliable fix.
 
 ## From mneme
 

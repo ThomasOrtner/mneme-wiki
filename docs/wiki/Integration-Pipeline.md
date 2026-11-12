@@ -1,6 +1,6 @@
 # Integration Pipeline
 
-← [Home](Home.md) · Full design: [plan.md → Integration stages](https://github.com/ThomasOrtner/mneme-wiki/blob/main/docs/plan.md#integration-stages),
+← [Home](Home.md) · Full design: [plan.md → Integration stages](https://github.com/ThomasOrtner/mneme-wiki/blob/main/docs/archive/mvp-plan.md#integration-stages),
 walkthrough with code references: [M3 tutorial](https://github.com/ThomasOrtner/mneme-wiki/blob/main/docs/milestones/M3-integrate.md).
 
 `mneme-wiki integrate <packet>` turns one source packet into one git commit. Code
@@ -11,9 +11,9 @@ orchestrates; the model only makes small, checkable decisions.
 | 1 | **Source page** | code (+ LLM if no `summary.md`) | Writes `sources/<slug>.md` with metadata and summary. |
 | 2 | **Chunk** | code | Splits `source.md` at headings into chunks of ≤ 500 words. The heading is the chunk's locator. |
 | 3 | **Extract** | LLM, per chunk | Lists subjects (name, entity or concept, aliases, description, claims), ≤ 15 per chunk. Schema-constrained JSON. |
-| 4 | **Merge** | code | Unions subjects of the same source by normalised name/alias. |
-| 5 | **Resolve** | code + LLM | Is this subject an existing page? Exact name/alias first; otherwise ≤ 4 candidates (name shape, then BM25), one **yes/no question per candidate**, with thinking. Every decision is logged with its reason. |
-| 6 | **Plan** | code | Groups claims by target page, picks paths for new pages. |
+| 4 | **Merge** | code | Unions subjects of the same source with the same normalised **name**. A shared alias isn't enough: models list related names (a mission's rover, a sibling camera) as aliases, so those go to resolve's yes/no check. |
+| 5 | **Resolve** | code + LLM | Is this subject an existing page? The subject's **name** matching a page's title or alias is an exact match. A match only through the subject's (model-made) aliases is not: that page becomes the first candidate. Neither is a name that looks like a document-local id (`WP2`, `D3`, `MS1`: 1–4 capitals and a number) matching a page from another source: work packages of two projects share such names. Then ≤ 4 candidates (alias matches, name shape, BM25), one **yes/no question per candidate**, with thinking. Every decision is logged with its reason. Finally, an alias that is another page's title or alias is dropped (`alias_conflict_dropped` in the run report). |
+| 6 | **Plan** | code | Groups claims by target page, picks paths for new pages. Document-local ids: if a new page's title would be a bare id like `D1` that another page already has (resolve decided they differ), the source's title goes in front ("Project Beta Proposal D1", `local_id_title_qualified`). On a title that names an owner before the id ("Project Alpha WP2"), the alias `WP2` becomes `PA-WP2` if the owner has a short name like `PA`, otherwise it is dropped (`local_id_alias_qualified` / `local_id_alias_dropped`). Elsewhere `M20`-shaped names are left alone: they can be global names (a mission acronym). |
 | 7 | **Patch** | LLM, one call per page | Gets the page, its new claims and the pages it may link to; returns a new lead and per-section `append`/`replace` operations. |
 | 8 | **Validate & apply** | code | Links only to known pages; every fact cited (missing citations are added and counted); `replace` may not drop links or shrink below 60 %; escaped newlines repaired. One retry, then the edit is **rejected** to `inbox/rejected/` with the reason. |
 | 9 | **Abbreviations** | code | Removes `ABC (Long Name)` expansions that neither the source nor the page backs up (models invent them). |
