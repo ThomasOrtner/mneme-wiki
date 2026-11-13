@@ -29,7 +29,7 @@ How agents use this file: [AGENTS.md § 7](../AGENTS.md#7-workflow).
 | 2 | Vault-specific knowledge | #24, #27, #14, #16, #33 | p1 |
 | 3 | Keep pages up to date, see the vault; document the pipeline | #20, #23, #19, #17, #32 | p2 |
 | 4 | Repair what is already in a vault | #6, #3 | p3 |
-| Later | Independent infrastructure | #5, #10, #7, #9, #4, #2 | p4 |
+| Later | Independent infrastructure, follow-ups | #5, #10, #7, #9, #4, #2, #34 | p4 |
 
 ## Phase 0: docs
 
@@ -114,6 +114,7 @@ No dependencies on the phases above; ordered by expected value.
 - [ ] #9 image handling
 - [ ] #4 embedding search beyond the MVP scale
 - [ ] #2 opt-in remote backend (OpenRouter)
+- [ ] #34 deadlines and leads of work packages, deliverables and milestones (split out of #33)
 
 ## Issue changes made with this plan
 
