@@ -22,7 +22,7 @@ Creates a vault in an empty or new folder: folders, `WIKI.md`, `index.md`, `log.
 ## integrate
 
 ```
-mneme-wiki integrate <packet> [<packet> ...] [--dry-run] [--stage S --out FILE]
+mneme-wiki integrate <packet> [<packet> ...] [--dry-run] [--stage S --out FILE] [--local-id-owner NAME]
 ```
 
 | Option | Effect |
@@ -31,6 +31,7 @@ mneme-wiki integrate <packet> [<packet> ...] [--dry-run] [--stage S --out FILE]
 | `--dry-run` | Run every stage, print the diff, write nothing |
 | `--stage S` | Stop after `chunk`, `extract`, `resolve`, `plan` or `patch`; needs exactly one packet and `--out` |
 | `--out FILE` | Write the stage's output as JSON |
+| `--local-id-owner NAME` | The project that owns the local ids (`WP2`) of packets without a `local_id_owner` field ([Source Packets](Source-Packets.md#sourcemetajson)); a packet that declares a different project is an error, nothing written |
 
 Several packets are integrated in order, one commit each, stopping at the first failure.
 See [Integration Pipeline](Integration-Pipeline.md).
@@ -72,7 +73,7 @@ mneme-wiki status [--json]
 ```
 
 Pages per type, unreadable pages, the glossary (terms and problems, if there is a
-`glossary.md`), git HEAD and whether there are uncommitted changes, the last log
+`glossary.md`), the domain rules (size, if `WIKI.md` has any), git HEAD and whether there are uncommitted changes, the last log
 entries, and the inbox packets with their integration state.
 
 ## bench

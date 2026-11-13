@@ -10,6 +10,7 @@ from ..vault import CaseCollisionError, Vault, slugify
 
 if TYPE_CHECKING:
     from ..glossary import Glossary
+    from ..packet import Project
 from .common import Claim, known_pages, looks_local_id, name_key, unique
 from .resolve import Resolved
 
@@ -38,6 +39,7 @@ def plan(
     owner: str = "",
     counters: dict[str, int] | None = None,
     glossary: Glossary | None = None,
+    project: Project | None = None,
 ) -> list[PagePlan]:
     """One PagePlan per page to write, in first-seen order. Subjects without claims
     produce nothing. A new page whose slug is taken by an unrelated page (or differs
@@ -85,7 +87,7 @@ def plan(
     out = list(plans.values())
     if glossary:
         _add_glossary_names(out, vault, glossary)
-    _qualify_local_ids(out, vault, counters)
+    _qualify_local_ids(out, vault, counters, project)
     return out
 
 
@@ -99,7 +101,9 @@ def _add_glossary_names(plans: list[PagePlan], vault: Vault, glossary: Glossary)
             p.aliases = unique([*p.aliases, *t.names()], exclude=[p.title] if p.new else [])
 
 
-def _qualify_local_ids(plans: list[PagePlan], vault: Vault, counters: dict[str, int]) -> None:
+def _qualify_local_ids(
+    plans: list[PagePlan], vault: Vault, counters: dict[str, int], project: Project | None = None
+) -> None:
     """#13 D3: a local id (`WP2`) is only valid inside its project, so it is no bare
     alias of a page whose title names the owner before the id ("Project Alpha WP2").
     If the owner has an acronym-like short name (`PA`) the alias becomes `PA-WP2`, a
@@ -110,6 +114,8 @@ def _qualify_local_ids(plans: list[PagePlan], vault: Vault, counters: dict[str, 
         names.setdefault(name_key(p.title), []).extend(p.names())
     for p in plans:
         names.setdefault(name_key(p.title), []).extend([p.title, *p.aliases])
+    if project and project.short:  # #27 D1: a declared short name wins
+        names[name_key(project.name)] = [project.short, *names.get(name_key(project.name), [])]
 
     def bump(key: str) -> None:
         counters[key] = counters.get(key, 0) + 1

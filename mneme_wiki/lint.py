@@ -14,9 +14,9 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass
 
 from . import frontmatter as fm
-from . import glossary, links, text
+from . import glossary, links, rules, text
 from .stages.common import name_key
-from .vault import GLOSSARY_FILE, Page, Vault
+from .vault import GLOSSARY_FILE, SCHEMA_FILE, Page, Vault
 
 ERROR, WARNING = "error", "warning"
 CLAIM_MIN_WORDS = 8
@@ -33,6 +33,7 @@ CHECKS = {
     "glossary-format": WARNING,
     "glossary-conflict": WARNING,
     "glossary-kind": WARNING,
+    "rules-too-long": WARNING,
     "ambiguous-link": WARNING,
     "missing-heading": WARNING,
     "orphan": WARNING,
@@ -166,12 +167,32 @@ def lint(vault: Vault) -> Report:
                 add(rel, 1, "duplicate-name", f"title/alias {name!r} also used by {others}")
 
     _lint_glossary(vault, pages, add)
+    _lint_rules(vault, add)
 
     for rel, page in pages.items():
         if page.meta.get("type") in ORPHAN_TYPES and not inbound.get(rel):
             add(rel, 1, "orphan", "no other page links here")
 
     return Report(sorted(findings), len(pages))
+
+
+def _lint_rules(vault: Vault, add) -> None:
+    """#14 D3: the domain rules go into every extract and resolve call."""
+    if not vault.exists(SCHEMA_FILE):
+        return
+    text = vault.read_text(SCHEMA_FILE)
+    found = rules.section(text)
+    if found is None:
+        return
+    size = len(rules.clean(found[0]))
+    if size > rules.MAX_CHARS:
+        add(
+            SCHEMA_FILE,
+            found[1],
+            "rules-too-long",
+            f"domain rules are {size} characters (cap {rules.MAX_CHARS}); they go into "
+            "every extract and resolve call",
+        )
 
 
 def _lint_glossary(vault: Vault, pages: dict[str, Page], add) -> None:

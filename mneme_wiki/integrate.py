@@ -26,6 +26,7 @@ from pathlib import Path
 
 from . import config, edits, expansions, glossary, links, packet
 from . import frontmatter as fm
+from . import rules as rules_mod
 from .index_log import append_log, reindex
 from .lint import lint
 from .llm import LLM, Call
@@ -66,6 +67,7 @@ class Report:
     updated: list[str] = field(default_factory=list)
     rejected: list[dict] = field(default_factory=list)
     skipped: list[str] = field(default_factory=list)  # subjects with no backed name (#25)
+    rules_hash: str = ""  # hash of the domain rules the run used (#14 D4); "" = none
     autolinks: int = 0
     counters: dict[str, int] = field(default_factory=dict)
     calls: dict[str, dict] = field(default_factory=dict)
@@ -138,6 +140,29 @@ def _strip_expansions(
             ws.write_page(page)
 
 
+def _project(pkt: packet.Packet, override: str | None) -> packet.Project | None:
+    """The owner of the source's local ids: the packet's `local_id_owner`, or
+    `--local-id-owner` for a packet without one.
+    A packet field and a different `--project` is an error (#27 D5), before any write."""
+    declared = pkt.project
+    if not override or not override.strip():
+        return declared
+    if declared and name_key(declared.name) != name_key(override):
+        raise IntegrateError(
+            f"{pkt.name} declares local_id_owner {declared.name!r}; "
+            f"--local-id-owner {override!r} differs"
+        )
+    return declared or packet.Project(" ".join(override.split()))
+
+
+def _project_field(ws: Vault, proj: packet.Project) -> str:
+    keys = {name_key(n) for n in proj.names()}
+    for p in known_pages(ws):
+        if name_key(p.title) in keys or any(name_key(a) in keys for a in p.aliases):
+            return links.format_link(p.path)
+    return proj.name
+
+
 def _merge_counters(into: dict[str, int], more: dict[str, int], prefix: str = "") -> None:
     for k, v in more.items():
         into[prefix + k] = into.get(prefix + k, 0) + v
@@ -153,10 +178,12 @@ def integrate(
     stop_after: str | None = None,
     today: dt.date | None = None,
     log: Log = lambda _m: None,
+    project: str | None = None,
 ) -> Report:
     if stop_after is not None and stop_after not in STAGES:
         raise IntegrateError(f"unknown stage {stop_after!r} (one of {', '.join(STAGES)})")
     pkt = packet.load(packet_dir)
+    proj = _project(pkt, project)
     now = dt.datetime.now()
     day = today or now.date()
     run_id = run_id_for(pkt.name, now)
@@ -221,11 +248,15 @@ def integrate(
     # -- extract + merge ---------------------------------------------------------------
     known = known_pages(ws)
     gl = glossary.load(ws)  # empty without glossary.md: every stage behaves as before
+    rules = rules_mod.load(ws)  # WIKI.md "## Domain rules" (#14); "" = prompts unchanged
+    report.rules_hash = rules_mod.digest(rules)
     log(f"extract: {len(chunks)} calls, vault has {len(known)} entity/concept pages")
     subjects = extract_stage.extract(
-        llm, pkt, chunks, known, log=log, counters=counters, glossary=gl
-    )
+        llm, pkt, chunks, known, log=log, counters=counters, glossary=gl, rules=rules,
+    )  # fmt: skip
+    # The glossary first: a name it knows (`M20` = Mars 2020) is never a local id.
     glossary.canonicalise(subjects, gl, counters)
+    extract_stage.expand_local_ids(subjects, proj.name if proj else "", counters)
     groups = extract_stage.merge_within_source(subjects)
     report.subjects, report.merged = len(subjects), len(groups)
     artifact("extract.json", [g.to_dict() for g in groups])
@@ -237,7 +268,9 @@ def integrate(
 
     # -- resolve -------------------------------------------------------------------------
     log("resolve: exact names, then pairwise yes/no per candidate")
-    resolved, decisions = resolve_stage.resolve(llm, groups, known, log=log, counters=counters)
+    resolved, decisions = resolve_stage.resolve(
+        llm, groups, known, log=log, counters=counters, rules=rules
+    )
     artifact("resolve_log.jsonl", "\n".join(json.dumps(d.to_dict(), ensure_ascii=False)
                                             for d in decisions))  # fmt: skip
     flush_calls()
@@ -256,16 +289,21 @@ def integrate(
         return stop("resolve", [r.to_dict() for r in resolved])
 
     # -- names: new titles and aliases must be in the source (#25) ------------------------
-    curated = [n for t in gl.terms for n in t.names()]
+    curated = [n for t in gl.terms for n in t.names()] + (proj.names() if proj else [])
     evidence = names_stage.Evidence(pkt.text, known, pkt.title, curated)
-    resolved, changes = names_stage.check(resolved, known, evidence, log=log, counters=counters)
+    resolved, changes = names_stage.check(
+        resolved, known, evidence, log=log, counters=counters,
+        project=proj.name if proj else "", source_title=pkt.title,
+    )  # fmt: skip
     report.skipped = [c.subject for c in changes if c.change == "subject_skipped"]
     artifact("names.json", [c.to_dict() for c in changes])
     if changes:
         log(f"names: {len(changes)} unbacked names fixed, {len(report.skipped)} subjects skipped")
 
     # -- plan ------------------------------------------------------------------------------
-    plans = plan_stage.plan(resolved, ws, owner=pkt.title, counters=counters, glossary=gl)
+    plans = plan_stage.plan(
+        resolved, ws, owner=pkt.title, counters=counters, glossary=gl, project=proj
+    )
     artifact("plan.json", [p.to_dict() for p in plans])
     lap("plan")
     n_new = sum(p.new for p in plans)
@@ -315,6 +353,8 @@ def integrate(
     src_page = ws.read_page(source_path)
     # The page's own title, not the subject name it was matched under.
     source_stage.set_touched(src_page, [(p, ws.read_page(p).title) for p in touched])
+    if proj:  # #27 D3/D4: a link only if the project's page exists (now)
+        src_page.meta["project"] = _project_field(ws, proj)
     ws.write_page(src_page)
     lap("autolink")
     log(f"autolink: {report.autolinks} links added on {len(added)} pages")
@@ -471,6 +511,7 @@ def render_report(r: Report) -> str:
         f"| autolinks | {r.autolinks} |",
         f"| lint after | {r.lint_errors} errors ({len(r.new_lint_errors)} new), "
         f"{r.lint_warnings} warnings |",
+        f"| domain rules | {r.rules_hash or '-'} |",
         f"| commit | {r.commit or '-'} |",
         f"| time | {total / 60:.1f} min |",
         "",

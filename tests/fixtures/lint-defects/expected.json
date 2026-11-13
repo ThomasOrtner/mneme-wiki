@@ -8,5 +8,6 @@
   ["duplicate-name",  "entities/rover-ops.md", 1],
   ["glossary-kind",   "entities/rover-ops.md", 1],
   ["glossary-conflict", "glossary.md", 7],
-  ["glossary-format", "glossary.md", 8]
+  ["glossary-format", "glossary.md", 8],
+  ["rules-too-long",  "WIKI.md", 11]
 ]}

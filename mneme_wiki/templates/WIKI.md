@@ -6,9 +6,10 @@ language: {{language}}
 
 # Wiki schema
 
-This file is the contract for this vault. It is read by every agent that
-writes wiki content (the mneme-wiki pipeline, or an assistant working over MCP)
-and by humans. Change it deliberately, and log the change in `log.md`.
+This file is the contract for this vault, for humans and for an assistant that
+writes wiki content over MCP. The mneme-wiki pipeline itself reads only the
+`## Domain rules` section below (its other stages follow fixed rules in code and
+prompts). Change it deliberately, and log the change in `log.md` as a `schema` entry.
 
 ## What this wiki is
 
@@ -92,6 +93,21 @@ Keep fields you don't recognise; humans and other tools may have added them.
   of existing pages. A part, a subtype, a step or a tool *related to* something
   is a different thing and gets its own page.
 - **Stubs are fine.** A page with only one or two claims gets `status: stub`.
+
+## Domain rules
+
+<!--
+Everything in this section outside HTML comments is sent to the model that decides
+what becomes a page (extract) and what is the same thing (resolve), with every one
+of those calls. Write short bullets in plain language and stay under 1,500
+characters (`lint` warns above). Names and abbreviations belong in glossary.md.
+Examples:
+
+- Sections every proposal has ("Gender aspects", "Budget table") are template
+  structure, not subjects.
+- 'AP' means 'Activity Plan', never 'work package'.
+- A rover and its mission are different things.
+-->
 
 ## Log format
 
