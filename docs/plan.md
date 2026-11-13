@@ -26,7 +26,7 @@ How agents use this file: [AGENTS.md § 7](../AGENTS.md#7-workflow).
 |---|---|---|---|
 | 0 | Docs that explain what the pipeline does | PR #18 | – |
 | 1 | Stop wrong merges and invented content at the source | #15, #13, #22, #25 | done |
-| 2 | Vault-specific knowledge | #24, #27, #14, #16 | p1 |
+| 2 | Vault-specific knowledge | #24, #27, #14, #16, #33 | p1 |
 | 3 | Keep pages up to date, see the vault; document the pipeline | #20, #23, #19, #17, #32 | p2 |
 | 4 | Repair what is already in a vault | #6, #3 | p3 |
 | Later | Independent infrastructure | #5, #10, #7, #9, #4, #2 | p4 |
@@ -78,6 +78,9 @@ knows, so that names which mean one thing end up on one page.
       resolve read. Simplest home for the vault-specific local-id patterns of #13.
 - [ ] **#16** ontology, first version = kinds + scoped kinds. Takes over #13 option 2
       (`part_of`), #15 fix 2 (the kind guard) and #20's D2 (lint on unknown kinds).
+- [ ] **#33** a source packet declares the local ids the document defines (work packages,
+      tasks, deliverables, milestones); code uses that list instead of guessing from the
+      shape. After #16, whose scoped kinds it shares. Producer side: mneme#22.
 
 ## Phase 3: keep pages up to date, see the vault
 
