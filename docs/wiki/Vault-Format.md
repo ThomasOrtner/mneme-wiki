@@ -231,7 +231,8 @@ kinds:
 What it changes (first version):
 
 - **Kinds.** Extract chooses `entity_kind` from these kinds (plus `other`) instead of the
-  built-in list. Resolve never asks the model whether two entities of different kinds
+  built-in list; the list is also shown after the chunk (without it, `qwen3:14b` labelled a
+  rover an instrument). Resolve never asks the model whether two entities of different kinds
   are the same; an exact name match still merges (names are trusted).
 - **Local ids.** The `id` patterns decide which names are document-local ids. They
   replace the built-in guess (1–4 capitals and a number) everywhere, so a global acronym

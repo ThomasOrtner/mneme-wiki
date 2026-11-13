@@ -33,7 +33,8 @@ stay fixed. Code doesn't interpret the rules; they steer the model. The run repo
 ## With an ontology
 
 If the vault has an [`ontology.md`](Vault-Format.md#ontologymd), extract's
-`entity_kind` choices come from it, resolve skips the yes/no check for two entities of
+`entity_kind` choices come from it (as the schema's allowed values, and as a line after
+the chunk listing the kinds), resolve skips the yes/no check for two entities of
 different kinds (`resolve_kind_guard_skipped`; an exact name match across kinds still
 merges and is counted, `resolve_kind_mismatch_exact`), and the scoped kinds' `id`
 patterns decide which names are document-local ids in every stage that cares (resolve's

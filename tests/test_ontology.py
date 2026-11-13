@@ -153,15 +153,21 @@ def test_scoped_ids_of_two_owners_get_two_pages_with_part_of(vault: Vault) -> No
 
 def test_extract_chooses_from_the_ontologys_kinds(vault: Vault, tmp_path: Path) -> None:
     toy = SchemaRecorder()
-    run(vault, "proposal-alpha", toy=toy)  # no ontology: the built-in kinds
+    _, backend = run(vault, "proposal-alpha", toy=toy)  # no ontology: the built-in kinds
     enum = toy.schemas[0]["properties"]["subjects"]["items"]["properties"]["entity_kind"]["enum"]
     assert enum == list(ENTITY_KINDS) and toy.schemas[0] is extract_stage.SCHEMA
+    extract_users = [r["user"] for r in backend.requests if r["role"] == "extract"]
+    assert not any(extract_stage.KINDS_HEADING in u for u in extract_users)
     other = init_vault(tmp_path / "other", language="en", today=DAY)
     with_ontology(other)
     toy = SchemaRecorder()
-    run(other, "proposal-alpha", toy=toy)
+    _, backend = run(other, "proposal-alpha", toy=toy)
+    kinds = ontology.parse(ONTOLOGY).entity_kinds()
     enum = toy.schemas[0]["properties"]["subjects"]["items"]["properties"]["entity_kind"]["enum"]
-    assert enum == ontology.parse(ONTOLOGY).entity_kinds()
+    assert enum == kinds
+    extract_users = [r["user"] for r in backend.requests if r["role"] == "extract"]
+    assert all(u.endswith(f"{extract_stage.KINDS_HEADING} {', '.join(kinds)}")
+               for u in extract_users)  # fmt: skip
 
 
 def test_status_reports_the_ontology(vault: Vault) -> None:

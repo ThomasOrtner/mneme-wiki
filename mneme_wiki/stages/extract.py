@@ -62,6 +62,9 @@ SCHEMA = {
 }
 
 SYSTEM = load_prompt("extract")
+# With a vault ontology (#16), after the chunk. qwen3:14b with only the schema enum
+# labelled a rover `instrument` 3/3; with this line, `rover` 3/3 (2026-11-13).
+KINDS_HEADING = "Entity kinds in this vault (set entity_kind to the most specific one):"
 
 
 def user_prompt(packet: Packet, chunk: Chunk, known: list[str]) -> str:
@@ -171,7 +174,10 @@ def extract(
     for chunk in chunks:
         known = known_for_chunk(chunk, pages, subjects, glossary)
         step = f"extract {chunk.index + 1}/{len(chunks)} {chunk.locator}"
-        prompt = with_rules(user_prompt(packet, chunk, known), rules)  # #14, after the chunk
+        prompt = user_prompt(packet, chunk, known)
+        if kinds:  # #16: the schema's enum alone isn't enough, the model needs the list
+            prompt += f"\n\n{KINDS_HEADING} {', '.join(kinds)}"
+        prompt = with_rules(prompt, rules)  # #14, after the chunk
         data = client.json(SYSTEM, prompt, schema, step=step)
         if data is None:
             counters["extract_chunk_failed"] = counters.get("extract_chunk_failed", 0) + 1
