@@ -75,7 +75,7 @@ knows, so that names which mean one thing end up on one page.
       collection label and isn't read); code expands its bare local ids (`WP2`), so
       a later report finds the proposal's pages by exact match. Small, builds on #13; the
       packet-level form of #16's scoped kinds, so #16 can later use it as the owner.
-- [ ] **#14** domain rules: a `## Domain rules` section in `WIKI.md` that extract and
+- [x] **#14** domain rules: a `## Domain rules` section in `WIKI.md` that extract and
       resolve read. Simplest home for the vault-specific local-id patterns of #13.
 - [ ] **#16** ontology, first version = kinds + scoped kinds. Takes over #13 option 2
       (`part_of`), #15 fix 2 (the kind guard) and #20's D2 (lint on unknown kinds).
