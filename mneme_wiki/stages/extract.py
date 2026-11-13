@@ -161,13 +161,13 @@ def extract(
     rules: str = "",
 ) -> list[Subject]:
     client = llm.for_role("extract")
-    system = with_rules(SYSTEM, rules)  # the vault's domain rules (#14), if any
     counters = counters if counters is not None else {}
     subjects: list[Subject] = []
     for chunk in chunks:
         known = known_for_chunk(chunk, pages, subjects, glossary)
         step = f"extract {chunk.index + 1}/{len(chunks)} {chunk.locator}"
-        data = client.json(system, user_prompt(packet, chunk, known), SCHEMA, step=step)
+        prompt = with_rules(user_prompt(packet, chunk, known), rules)  # #14, after the chunk
+        data = client.json(SYSTEM, prompt, SCHEMA, step=step)
         if data is None:
             counters["extract_chunk_failed"] = counters.get("extract_chunk_failed", 0) + 1
             log(f"    ✗ chunk {chunk.index + 1} failed twice; its subjects are missing")

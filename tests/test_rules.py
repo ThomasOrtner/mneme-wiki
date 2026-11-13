@@ -29,9 +29,11 @@ class SystemRecorder(Toy):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.systems: dict[str, set[str]] = {}
+        self.users: dict[str, list[str]] = {}
 
     def __call__(self, role, system, user, schema, thinking):
         self.systems.setdefault(role, set()).add(system)
+        self.users.setdefault(role, []).append(user)
         return super().__call__(role, system, user, schema, thinking)
 
 
@@ -70,9 +72,9 @@ def test_section_ends_at_the_next_heading_and_skips_code() -> None:
     assert rules.section("# no rules here\n") is None
 
 
-def test_no_rules_leave_the_system_prompt_unchanged() -> None:
-    assert rules.with_rules("SYSTEM", "") == "SYSTEM"
-    assert rules.with_rules("SYSTEM", RULE) == f"SYSTEM\n\n{rules.HEADING}\n\n{RULE}\n"
+def test_no_rules_leave_the_prompt_unchanged() -> None:
+    assert rules.with_rules("USER", "") == "USER"
+    assert rules.with_rules("USER\n", RULE) == f"USER\n\n{rules.HEADING}\n{RULE}"
     assert rules.digest("") == "" and len(rules.digest(RULE)) == 12
 
 
@@ -86,16 +88,21 @@ def test_without_rules_the_prompts_are_todays(vault: Vault) -> None:
     report, toy = run(vault)
     assert toy.systems["extract"] == {extract_stage.SYSTEM}
     assert toy.systems["resolve"] == {resolve_stage.SYSTEM}
+    assert not any(rules.HEADING in u for us in toy.users.values() for u in us)
     assert report.rules_hash == ""
 
 
 def test_rules_reach_extract_and_resolve_only(vault: Vault) -> None:
+    """At the end of the user prompt, after the chunk or the pair: qwen3:14b ignored a
+    rule at the end of the system prompt (9/9) and followed it there (3/3)."""
     set_rules(vault, RULE)
     report, toy = run(vault)
     for role in ("extract", "resolve"):
-        (system,) = toy.systems[role]
-        assert system.endswith(f"{rules.HEADING}\n\n{RULE}\n")
-    assert not any(RULE in s for s in toy.systems.get("patch", set()))  # D1
+        assert toy.users[role] and all(
+            u.endswith(f"{rules.HEADING}\n{RULE}") for u in toy.users[role]
+        )
+    assert toy.systems["extract"] == {extract_stage.SYSTEM}  # system prompts stay fixed
+    assert not any(RULE in u for u in toy.users.get("patch", []))  # D1
     assert report.rules_hash == rules.digest(RULE)
     assert rules.digest(RULE) in vault.read_text(f"{report.run_dir}/report.md")
 

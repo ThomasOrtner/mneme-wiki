@@ -136,9 +136,10 @@ The ROCC is located in Turin ([[sources/rocc-glossary]]).
 
 `WIKI.md` describes the vault for humans and for an assistant working over MCP. The
 pipeline reads one part of it: an optional `## Domain rules` section (#14). Its text,
-without HTML comments, is appended to the system prompt of **extract** (what becomes
-a page) and **resolve** (what is the same thing) under the heading "Rules for this
-vault". Patch doesn't get it.
+without HTML comments, is added at the end of every **extract** (what becomes a page)
+and **resolve** (what is the same thing) prompt, after the text it is about, under
+"Rules for this vault (they override the general instructions)". Patch doesn't get
+it. (At the end of the general instructions, `qwen3:14b` ignored them.)
 
 ```markdown
 ## Domain rules

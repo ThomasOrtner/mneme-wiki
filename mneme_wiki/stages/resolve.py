@@ -203,7 +203,6 @@ def resolve(
     """Resolve every subject to an existing page or a new one; fold in-source duplicates."""
     counters = counters if counters is not None else {}
     client = llm.for_role("resolve")
-    system = with_rules(SYSTEM, rules)  # the vault's domain rules (#14), if any
     pool = _Pool(pages)
     kept: list[Resolved] = []
     new_resolved: dict[str, Resolved] = {}
@@ -238,7 +237,8 @@ def resolve(
         for cand, via in pool.candidates(subject):
             decision.candidates.append(cand.title)
             step = f"resolve '{subject.name}' vs '{cand.title}'"
-            data = client.json(system, pair_prompt(subject, cand), SCHEMA, step=step)
+            prompt = with_rules(pair_prompt(subject, cand), rules)  # #14, after the pair
+            data = client.json(SYSTEM, prompt, SCHEMA, step=step)
             bump("resolve_llm_calls")
             same = bool((data or {}).get("same"))
             reason = str((data or {}).get("reason") or ("no valid answer" if data is None else ""))

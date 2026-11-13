@@ -3,14 +3,20 @@
 A vault can add a `## Domain rules` section to its `WIKI.md`: short bullet points in
 plain language, written by the human ("'AP' means 'Activity Plan', never 'work
 package'"; "A rover and its mission are different things"). Extract and resolve get
-the section's text appended to their system prompt under a fixed heading (D1: the two
-stages that decide what becomes a page and what merges; patch doesn't get it).
+the section's text at the **end of the user prompt**, after the chunk or the pair,
+under a fixed heading that says the rules override the general instructions (D1: the
+two stages that decide what becomes a page and what merges; patch doesn't get it).
+
+Measured on `qwen3:14b` (2026-11-13, a report's "Planning Notes" section that the rule
+says isn't a subject): appended to the system prompt, or put before the chunk, the
+rule was ignored in 9/9 extract calls; after the chunk it was followed in 3/3. With
+thinking it was followed too, but extract thinking costs several times the time.
 
 - Free text only (D2): names belong in the glossary (#24), kinds and relations in the
   ontology (#16).
 - HTML comments are dropped, so the template's commented example is inactive.
 - Without the section, or with an empty one, every prompt is byte for byte what it
-  was before (`with_rules` returns the system prompt unchanged).
+  was before (`with_rules` returns the user prompt unchanged).
 - The text is paid on every call (~120 resolve calls per source), so `lint` warns
   above `MAX_CHARS` (D3), and each run records the rules' hash (D4).
 """
@@ -23,7 +29,7 @@ import re
 from .vault import SCHEMA_FILE, Vault
 
 SECTION = "Domain rules"
-HEADING = "## Rules for this vault"  # what the model sees
+HEADING = "Rules for this vault (they override the general instructions):"
 MAX_CHARS = 1500
 _COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 _FENCE = re.compile(r"^[ \t]{0,3}(`{3,}|~{3,})")
@@ -77,11 +83,11 @@ def load(vault: Vault) -> str:
     return clean(found[0]) if found else ""
 
 
-def with_rules(system: str, rules: str) -> str:
-    """`system` with the rules appended; unchanged without rules."""
+def with_rules(user: str, rules: str) -> str:
+    """The user prompt with the rules appended at its end; unchanged without rules."""
     if not rules:
-        return system
-    return f"{system.rstrip()}\n\n{HEADING}\n\n{rules}\n"
+        return user
+    return f"{user.rstrip()}\n\n{HEADING}\n{rules}"
 
 
 def digest(rules: str) -> str:
