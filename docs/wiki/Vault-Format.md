@@ -132,6 +132,33 @@ The ROCC is located in Turin ([[sources/rocc-glossary]]).
 3. `##` sections by topic.
 4. Inline citations on every claim; links mostly in the prose.
 
+## Domain rules in WIKI.md
+
+`WIKI.md` describes the vault for humans and for an assistant working over MCP. The
+pipeline reads one part of it: an optional `## Domain rules` section (#14). Its text,
+without HTML comments, is added at the end of every **extract** (what becomes a page)
+and **resolve** (what is the same thing) prompt, after the text it is about, under
+"Rules for this vault (they override the general instructions)". Patch doesn't get
+it. (At the end of the general instructions, `qwen3:14b` ignored them.)
+
+```markdown
+## Domain rules
+
+- Sections every proposal has ("Gender aspects", "Budget table") are template
+  structure, not subjects.
+- 'AP' means 'Activity Plan', never 'work package'.
+```
+
+- Short bullets in plain language. They are sent with every extract and resolve call
+  (about 120 per source), so `lint` warns above 1,500 characters (`rules-too-long`).
+- Free text only: names and abbreviations belong in `glossary.md`, kinds and
+  relations in the ontology (#16).
+- A new vault's section holds only a commented example, so it is inactive. Without
+  the section, every prompt is exactly as before.
+- Each run records a short hash of the rules it used (`report.md`, `rules_hash`), so
+  you can tell which runs ran under which rules.
+- Change it deliberately, commit it, and log a `schema` entry in `log.md`.
+
 ## glossary.md
 
 An optional, curated list of abbreviations and names that are known to mean one thing

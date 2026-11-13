@@ -21,6 +21,15 @@ orchestrates; the model only makes small, checkable decisions.
 | 10 | **Autolink** | code | Turns the first plain mention of another page's title or alias into a link. |
 | 11 | **Finish** | code | Source page lists touched pages; `index.md`, `log.md`; lint; git commit; run report. |
 
+## With domain rules
+
+If `WIKI.md` has a non-empty `## Domain rules` section
+([Vault Format](Vault-Format.md#domain-rules-in-wikimd)), its text is added at the end
+of every **extract** and **resolve** prompt (after the chunk, after the pair), under
+"Rules for this vault (they override the general instructions)". The system prompts
+stay fixed. Code doesn't interpret the rules; they steer the model. The run report records their hash
+(`rules_hash`). Without rules nothing changes.
+
 ## With a local-id owner
 
 A packet can declare the project that owns its local ids (`local_id_owner` in

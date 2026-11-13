@@ -26,6 +26,7 @@ from pathlib import Path
 
 from . import config, edits, expansions, glossary, links, packet
 from . import frontmatter as fm
+from . import rules as rules_mod
 from .index_log import append_log, reindex
 from .lint import lint
 from .llm import LLM, Call
@@ -66,6 +67,7 @@ class Report:
     updated: list[str] = field(default_factory=list)
     rejected: list[dict] = field(default_factory=list)
     skipped: list[str] = field(default_factory=list)  # subjects with no backed name (#25)
+    rules_hash: str = ""  # hash of the domain rules the run used (#14 D4); "" = none
     autolinks: int = 0
     counters: dict[str, int] = field(default_factory=dict)
     calls: dict[str, dict] = field(default_factory=dict)
@@ -246,9 +248,11 @@ def integrate(
     # -- extract + merge ---------------------------------------------------------------
     known = known_pages(ws)
     gl = glossary.load(ws)  # empty without glossary.md: every stage behaves as before
+    rules = rules_mod.load(ws)  # WIKI.md "## Domain rules" (#14); "" = prompts unchanged
+    report.rules_hash = rules_mod.digest(rules)
     log(f"extract: {len(chunks)} calls, vault has {len(known)} entity/concept pages")
     subjects = extract_stage.extract(
-        llm, pkt, chunks, known, log=log, counters=counters, glossary=gl,
+        llm, pkt, chunks, known, log=log, counters=counters, glossary=gl, rules=rules,
     )  # fmt: skip
     # The glossary first: a name it knows (`M20` = Mars 2020) is never a local id.
     glossary.canonicalise(subjects, gl, counters)
@@ -264,7 +268,9 @@ def integrate(
 
     # -- resolve -------------------------------------------------------------------------
     log("resolve: exact names, then pairwise yes/no per candidate")
-    resolved, decisions = resolve_stage.resolve(llm, groups, known, log=log, counters=counters)
+    resolved, decisions = resolve_stage.resolve(
+        llm, groups, known, log=log, counters=counters, rules=rules
+    )
     artifact("resolve_log.jsonl", "\n".join(json.dumps(d.to_dict(), ensure_ascii=False)
                                             for d in decisions))  # fmt: skip
     flush_calls()
@@ -505,6 +511,7 @@ def render_report(r: Report) -> str:
         f"| autolinks | {r.autolinks} |",
         f"| lint after | {r.lint_errors} errors ({len(r.new_lint_errors)} new), "
         f"{r.lint_warnings} warnings |",
+        f"| domain rules | {r.rules_hash or '-'} |",
         f"| commit | {r.commit or '-'} |",
         f"| time | {total / 60:.1f} min |",
         "",

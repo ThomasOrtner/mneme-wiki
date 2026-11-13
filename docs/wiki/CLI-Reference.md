@@ -73,7 +73,7 @@ mneme-wiki status [--json]
 ```
 
 Pages per type, unreadable pages, the glossary (terms and problems, if there is a
-`glossary.md`), git HEAD and whether there are uncommitted changes, the last log
+`glossary.md`), the domain rules (size, if `WIKI.md` has any), git HEAD and whether there are uncommitted changes, the last log
 entries, and the inbox packets with their integration state.
 
 ## bench
