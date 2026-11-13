@@ -27,7 +27,7 @@ How agents use this file: [AGENTS.md § 7](../AGENTS.md#7-workflow).
 | 0 | Docs that explain what the pipeline does | PR #18 | – |
 | 1 | Stop wrong merges and invented content at the source | #15, #13, #22, #25 | done |
 | 2 | Vault-specific knowledge | #24, #27, #14, #16 | p1 |
-| 3 | Keep pages up to date, see the vault | #20, #23, #19, #17 | p2 |
+| 3 | Keep pages up to date, see the vault; document the pipeline | #20, #23, #19, #17, #32 | p2 |
 | 4 | Repair what is already in a vault | #6, #3 | p3 |
 | Later | Independent infrastructure | #5, #10, #7, #9, #4, #2 | p4 |
 
@@ -92,6 +92,8 @@ These are small, code only and independent of each other.
       own catch-up. Its D1 suggests shipping it together with #19.
 - [ ] **#19** recompute `stub`/`active` when integrate writes a page.
 - [ ] **#17** autolink older pages to pages a run creates.
+- [ ] **#32** in-depth pipeline reference: every stage, code vs model, prompts. Last in the
+      phase, so it describes the pipeline after #14, #16, #19 and #17.
 
 ## Phase 4: repair
 
