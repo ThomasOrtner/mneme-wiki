@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING
 
+from .. import links
 from ..vault import CaseCollisionError, Vault, slugify
 
 if TYPE_CHECKING:
     from ..glossary import Glossary
+    from ..ontology import Ontology
     from ..packet import Project
 from .common import Claim, known_pages, looks_local_id, name_key, unique
 from .resolve import Resolved
@@ -27,6 +30,7 @@ class PagePlan:
     aliases: list[str]
     description: str
     claims: list[Claim] = field(default_factory=list)
+    part_of: str = ""  # #16: the owner page (link) or name, for a scoped id's page
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -40,6 +44,8 @@ def plan(
     counters: dict[str, int] | None = None,
     glossary: Glossary | None = None,
     project: Project | None = None,
+    ontology: Ontology | None = None,
+    is_local: Callable[[str], bool] = looks_local_id,
 ) -> list[PagePlan]:
     """One PagePlan per page to write, in first-seen order. Subjects without claims
     produce nothing. A new page whose slug is taken by an unrelated page (or differs
@@ -61,7 +67,7 @@ def plan(
         if r.target:
             path, new = r.target, False
         else:
-            if owner and looks_local_id(s.name) and name_key(s.name) in taken_names:
+            if owner and is_local(s.name) and name_key(s.name) in taken_names:
                 title = f"{owner} {s.name}"
                 counters["local_id_title_qualified"] = (
                     counters.get("local_id_title_qualified", 0) + 1
@@ -87,8 +93,41 @@ def plan(
     out = list(plans.values())
     if glossary:
         _add_glossary_names(out, vault, glossary)
-    _qualify_local_ids(out, vault, counters, project)
+    _qualify_local_ids(out, vault, counters, project, is_local)
+    if ontology:
+        _scoped_kinds(out, vault, ontology, project, counters)
     return out
+
+
+def _scoped_kinds(
+    plans: list[PagePlan],
+    vault: Vault,
+    ontology: Ontology,
+    project: Project | None,
+    counters: dict[str, int],
+) -> None:
+    """#16 step 2: a page whose title is a local id of a scoped kind ("WP2", or "Project
+    Alpha WP2") gets that kind, if new, and `part_of` the source's owner when the kind is
+    part of a top-level kind (a deliverable of the project, not a task of a WP)."""
+    owner_ref = _owner_ref(vault, project) if project else ""
+    for p in plans:
+        kind = ontology.kind_of_qualified(p.title)
+        if kind is None:
+            continue
+        if p.new:
+            p.kind, p.entity_kind = "entity", kind.name
+            counters["ontology_scoped_kind"] = counters.get("ontology_scoped_kind", 0) + 1
+        if owner_ref and ontology.owner_part_of(kind):
+            p.part_of = owner_ref
+
+
+def _owner_ref(vault: Vault, project: Project) -> str:
+    """A link to the owner's page if it exists, else its name (no broken link)."""
+    keys = {name_key(n) for n in project.names()}
+    for page in known_pages(vault):
+        if any(name_key(n) in keys for n in page.names()):
+            return links.format_link(page.path)
+    return project.name
 
 
 def _add_glossary_names(plans: list[PagePlan], vault: Vault, glossary: Glossary) -> None:
@@ -102,7 +141,11 @@ def _add_glossary_names(plans: list[PagePlan], vault: Vault, glossary: Glossary)
 
 
 def _qualify_local_ids(
-    plans: list[PagePlan], vault: Vault, counters: dict[str, int], project: Project | None = None
+    plans: list[PagePlan],
+    vault: Vault,
+    counters: dict[str, int],
+    project: Project | None = None,
+    is_local: Callable[[str], bool] = looks_local_id,
 ) -> None:
     """#13 D3: a local id (`WP2`) is only valid inside its project, so it is no bare
     alias of a page whose title names the owner before the id ("Project Alpha WP2").
@@ -121,16 +164,16 @@ def _qualify_local_ids(
         counters[key] = counters.get(key, 0) + 1
 
     for p in plans:
-        if not any(looks_local_id(a) for a in p.aliases):
+        if not any(is_local(a) for a in p.aliases):
             continue
         kept = []
         for alias in p.aliases:
-            owner = _owner_in_title(p.title, alias) if looks_local_id(alias) else ""
+            owner = _owner_in_title(p.title, alias) if is_local(alias) else ""
             if not owner:
                 kept.append(alias)
                 continue
             bump("local_id_alias_dropped")
-            short = _owner_short(owner, names)
+            short = _owner_short(owner, names, is_local)
             if short:
                 kept.append(f"{short}-{alias.replace(' ', '')}")
                 bump("local_id_alias_qualified")
@@ -143,12 +186,14 @@ def _owner_in_title(title: str, local_id: str) -> str:
     return title[: m.start()].strip(" -:") if m else ""
 
 
-def _owner_short(owner: str, names: dict[str, list[str]]) -> str | None:
+def _owner_short(
+    owner: str, names: dict[str, list[str]], is_local: Callable[[str], bool] = looks_local_id
+) -> str | None:
     """The owner's shortest acronym-like name (`PA`), if it has one."""
     shorts = [
         n
         for n in names.get(name_key(owner), [])
-        if _SHORT.fullmatch(n) and sum(c.isupper() for c in n) >= 2 and not looks_local_id(n)
+        if _SHORT.fullmatch(n) and sum(c.isupper() for c in n) >= 2 and not is_local(n)
     ]
     return min(shorts, key=len) if shorts else None
 

@@ -9,6 +9,7 @@ subjects from different chunks with the same name are merged by code.
 
 from __future__ import annotations
 
+import copy
 import re
 from collections.abc import Callable
 from typing import TYPE_CHECKING
@@ -118,7 +119,9 @@ def _mentioned(name: str, raw: str, lowered: str) -> bool:
     return re.search(rf"(?<!\w){re.escape(name.casefold())}(?!\w)", lowered) is not None
 
 
-def parse_subjects(data: dict, chunk: Chunk) -> tuple[list[Subject], int]:
+def parse_subjects(
+    data: dict, chunk: Chunk, kinds: tuple[str, ...] | list[str] = ENTITY_KINDS
+) -> tuple[list[Subject], int]:
     """Validate model output; returns (subjects, number of items dropped)."""
     subjects, dropped = [], 0
     for item in (data.get("subjects") or [])[:MAX_SUBJECTS]:
@@ -127,9 +130,7 @@ def parse_subjects(data: dict, chunk: Chunk) -> tuple[list[Subject], int]:
             continue
         name = " ".join(str(item.get("name") or "").split())[:MAX_NAME]
         kind = item.get("kind") if item.get("kind") in ("entity", "concept") else "concept"
-        entity_kind = (
-            item.get("entity_kind") if item.get("entity_kind") in ENTITY_KINDS else "other"
-        )
+        entity_kind = item.get("entity_kind") if item.get("entity_kind") in kinds else "other"
         claims = [
             Claim(" ".join(str(c).split())[:MAX_CLAIM], chunk.locator)
             for c in (item.get("claims") or [])
@@ -159,27 +160,41 @@ def extract(
     counters: dict[str, int] | None = None,
     glossary: Glossary | None = None,
     rules: str = "",
+    kinds: list[str] | None = None,
 ) -> list[Subject]:
+    """`kinds`: the vault ontology's entity kinds (#16), replacing the built-in list."""
     client = llm.for_role("extract")
+    schema = schema_for(kinds) if kinds else SCHEMA
+    allowed = kinds or ENTITY_KINDS
     counters = counters if counters is not None else {}
     subjects: list[Subject] = []
     for chunk in chunks:
         known = known_for_chunk(chunk, pages, subjects, glossary)
         step = f"extract {chunk.index + 1}/{len(chunks)} {chunk.locator}"
         prompt = with_rules(user_prompt(packet, chunk, known), rules)  # #14, after the chunk
-        data = client.json(SYSTEM, prompt, SCHEMA, step=step)
+        data = client.json(SYSTEM, prompt, schema, step=step)
         if data is None:
             counters["extract_chunk_failed"] = counters.get("extract_chunk_failed", 0) + 1
             log(f"    ✗ chunk {chunk.index + 1} failed twice; its subjects are missing")
             continue
-        found, dropped = parse_subjects(data, chunk)
+        found, dropped = parse_subjects(data, chunk, allowed)
         counters["extract_items_dropped"] = counters.get("extract_items_dropped", 0) + dropped
         subjects.extend(found)
     return subjects
 
 
+def schema_for(kinds: list[str]) -> dict:
+    """SCHEMA with the vault's entity kinds as the `entity_kind` enum (#16)."""
+    schema = copy.deepcopy(SCHEMA)
+    schema["properties"]["subjects"]["items"]["properties"]["entity_kind"]["enum"] = list(kinds)
+    return schema
+
+
 def expand_local_ids(
-    subjects: list[Subject], project: str, counters: dict[str, int] | None = None
+    subjects: list[Subject],
+    project: str,
+    counters: dict[str, int] | None = None,
+    is_local: Callable[[str], bool] = looks_local_id,
 ) -> None:
     """#27: the source declares its project, so a bare document-local id (`WP2`) is that
     project's: rename it to "Project Alpha WP2" (the bare id stays as an alias, which
@@ -189,7 +204,7 @@ def expand_local_ids(
     if not project:
         return
     for s in subjects:
-        if looks_local_id(s.name) and not s.curated:
+        if is_local(s.name) and not s.curated:
             bare = s.name
             s.name = f"{project} {bare}"
             s.aliases = unique([bare, *s.aliases], exclude=[s.name])

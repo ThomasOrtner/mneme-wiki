@@ -53,6 +53,7 @@ class Candidate:
     aliases: list[str]
     description: str
     kind: str
+    entity_kind: str = ""
 
 
 @dataclass
@@ -86,6 +87,18 @@ class Resolved:
         return {"target": self.target, "how": self.how, "subject": self.subject.to_dict()}
 
 
+def kinds_differ(subject: Subject, cand: Candidate) -> bool:
+    """Both entities with a known, different `entity_kind` ("other" is unknown)."""
+    a, b = subject.entity_kind, cand.entity_kind
+    return (
+        subject.kind == "entity"
+        and cand.kind == "entity"
+        and bool(a and b)
+        and "other" not in (a, b)
+        and a != b
+    )
+
+
 def pair_prompt(subject: Subject, cand: Candidate) -> str:
     return (
         f"A: {subject.name} (aliases: {subject.aliases})\n   {subject.description}\n"
@@ -114,21 +127,27 @@ class _Pool:
     names of new subjects (and of subjects folded into them). `by_alias` holds the
     model's aliases of new subjects, which are unchecked (#15)."""
 
-    def __init__(self, pages: list[KnownPage]) -> None:
+    def __init__(
+        self, pages: list[KnownPage], is_local: Callable[[str], bool] = looks_local_id
+    ) -> None:
+        self.is_local = is_local  # which names are document-local ids (#13, #16)
         self.cands: dict[str, Candidate] = {}
         self.by_name: dict[str, str] = {}
         self.by_alias: dict[str, str] = {}
         self.new: dict[str, Subject] = {}
         for p in pages:
-            self.cands[p.path] = Candidate(p.path, p.title, list(p.aliases), p.description, p.type)
+            self.cands[p.path] = Candidate(
+                p.path, p.title, list(p.aliases), p.description, p.type, p.entity_kind
+            )
             self.add_names(p.path, p.names())
 
     def add_new(self, subject: Subject) -> str:
         cid = f"new:{len(self.new)}"
         self.new[cid] = subject
         self.cands[cid] = Candidate(
-            cid, subject.name, list(subject.aliases), subject.description, subject.kind
-        )
+            cid, subject.name, list(subject.aliases), subject.description, subject.kind,
+            subject.entity_kind,
+        )  # fmt: skip
         self.add_names(cid, [subject.name, *subject.curated], subject.aliases)
         return cid
 
@@ -142,7 +161,7 @@ class _Pool:
 
     def exact(self, subject: Subject) -> str | None:
         cid = self.by_name.get(name_key(subject.name))
-        if cid and looks_local_id(subject.name) and not cid.startswith("new:"):
+        if cid and self.is_local(subject.name) and not cid.startswith("new:"):
             if not subject.curated:
                 return None  # a local id of another document: ask, don't assume (#13)
         if cid is None:  # curated glossary names are trusted like the name (#24)
@@ -199,11 +218,16 @@ def resolve(
     log: Callable[[str], None] = lambda _m: None,
     counters: dict[str, int] | None = None,
     rules: str = "",
+    is_local: Callable[[str], bool] = looks_local_id,
+    kind_guard: bool = False,
 ) -> tuple[list[Resolved], list[Decision]]:
-    """Resolve every subject to an existing page or a new one; fold in-source duplicates."""
+    """Resolve every subject to an existing page or a new one; fold in-source duplicates.
+
+    `kind_guard` (#16 D11, with an ontology): a candidate of another entity kind is never
+    sent to the yes/no check; an exact name match still merges and is only counted."""
     counters = counters if counters is not None else {}
     client = llm.for_role("resolve")
-    pool = _Pool(pages)
+    pool = _Pool(pages, is_local)
     kept: list[Resolved] = []
     new_resolved: dict[str, Resolved] = {}
     decisions: list[Decision] = []
@@ -230,12 +254,21 @@ def resolve(
         decisions.append(decision)
         exact = pool.exact(subject)
         if exact:
+            if kind_guard and kinds_differ(subject, pool.cands[exact]):
+                bump("resolve_kind_mismatch_exact")
+                log(f"    ! '{subject.name}' ({subject.entity_kind}) matched by name a page "
+                    f"of kind {pool.cands[exact].entity_kind}")  # fmt: skip
             decision.how = "exact"
             fold(subject, exact, "exact", decision)
             continue
         matched = None
         for cand, via in pool.candidates(subject):
             decision.candidates.append(cand.title)
+            if kind_guard and kinds_differ(subject, cand):
+                bump("resolve_kind_guard_skipped")
+                reason = f"different kinds: {subject.entity_kind} vs {cand.entity_kind}"
+                decision.checks.append(Check(cand.title, False, reason, "kind"))
+                continue
             step = f"resolve '{subject.name}' vs '{cand.title}'"
             prompt = with_rules(pair_prompt(subject, cand), rules)  # #14, after the pair
             data = client.json(SYSTEM, prompt, SCHEMA, step=step)

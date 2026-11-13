@@ -55,6 +55,7 @@ class KnownPage:
     type: str
     aliases: tuple[str, ...]
     description: str  # first sentence of the lead
+    entity_kind: str = ""  # entities only; for the ontology's kind guard (#16)
 
     def names(self) -> list[str]:
         return [self.title, *self.aliases]
@@ -79,6 +80,7 @@ def known_page(page: Page) -> KnownPage:
         if isinstance(aliases, list)
         else (),
         description=text.first_sentence(text.plain(lead.text), 200) if lead else "",
+        entity_kind=str(page.meta.get("entity_kind") or ""),
     )
 
 
