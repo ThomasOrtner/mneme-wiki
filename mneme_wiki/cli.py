@@ -208,6 +208,8 @@ def cmd_status(args: argparse.Namespace) -> int:
     if gl["active"] or gl["problems"]:
         problems = f", {gl['problems']} problems (see lint)" if gl["problems"] else ""
         console.print(f"glossary: {gl['terms']} terms{problems}")
+    if data["rules"]["active"]:
+        console.print(f"domain rules: {data['rules']['chars']} characters")
     if data["git_head"] is None:
         console.print("git: not a repository")
     else:

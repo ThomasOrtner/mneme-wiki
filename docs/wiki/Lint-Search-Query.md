@@ -20,6 +20,7 @@ Deterministic checks, no model involved:
 | `glossary-format` | warning | A `glossary.md` row that can't be used (wrong cell count, unknown `Kind` or `Prefer`, no name) |
 | `glossary-conflict` | warning | A glossary name in two rows, or carried by a page whose title isn't in that row |
 | `glossary-kind` | warning | A page whose kind differs from its glossary row's `Kind` |
+| `rules-too-long` | warning | The `## Domain rules` section of `WIKI.md` is over 1,500 characters (it goes into every extract and resolve call) |
 | `orphan` | warning | Content pages nothing links to |
 | `uncited` | warning | A paragraph or list item of ≥ 8 words in an entity/concept/synthesis page with no link to `sources/` |
 | `ambiguous-link` | warning | A bare `[[name]]` that matches several pages |

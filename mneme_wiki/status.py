@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from collections import Counter
 
-from . import config, glossary
+from . import config, glossary, rules
 from .stages.source import find_existing
 from .vault import Page, Vault
 
@@ -45,6 +45,7 @@ def overview(v: Vault) -> dict:
         "pages": dict(sorted(types.items())),
         "unreadable_pages": broken,
         "glossary": {"active": bool(gl), "terms": len(gl.terms), "problems": len(gl.problems)},
+        "rules": {"active": bool(r := rules.load(v)), "chars": len(r)},
         "last_log_entries": entries,
         "git_head": head,
         "uncommitted_changes": (not v.is_clean()) if v.is_repo() else None,

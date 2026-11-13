@@ -28,6 +28,7 @@ from dataclasses import asdict, dataclass, field
 
 from ..llm import LLM
 from ..prompts import load_prompt
+from ..rules import with_rules
 from ..search import Doc, SearchIndex
 from .common import KnownPage, Subject, initials, looks_local_id, name_key, unique
 
@@ -197,10 +198,12 @@ def resolve(
     *,
     log: Callable[[str], None] = lambda _m: None,
     counters: dict[str, int] | None = None,
+    rules: str = "",
 ) -> tuple[list[Resolved], list[Decision]]:
     """Resolve every subject to an existing page or a new one; fold in-source duplicates."""
     counters = counters if counters is not None else {}
     client = llm.for_role("resolve")
+    system = with_rules(SYSTEM, rules)  # the vault's domain rules (#14), if any
     pool = _Pool(pages)
     kept: list[Resolved] = []
     new_resolved: dict[str, Resolved] = {}
@@ -235,7 +238,7 @@ def resolve(
         for cand, via in pool.candidates(subject):
             decision.candidates.append(cand.title)
             step = f"resolve '{subject.name}' vs '{cand.title}'"
-            data = client.json(SYSTEM, pair_prompt(subject, cand), SCHEMA, step=step)
+            data = client.json(system, pair_prompt(subject, cand), SCHEMA, step=step)
             bump("resolve_llm_calls")
             same = bool((data or {}).get("same"))
             reason = str((data or {}).get("reason") or ("no valid answer" if data is None else ""))
