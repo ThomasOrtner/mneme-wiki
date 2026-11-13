@@ -32,6 +32,7 @@ class Subject:
     description: str
     claims: list[Claim]
     chunks: list[int] = field(default_factory=list)
+    curated: list[str] = field(default_factory=list)  # glossary names (#24): trusted
 
     def names(self) -> list[str]:
         return [self.name, *self.aliases]

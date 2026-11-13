@@ -204,6 +204,10 @@ def cmd_status(args: argparse.Namespace) -> int:
     console.print(f"[bold]{escape(data['vault'])}[/bold]: {pages}")
     if data["unreadable_pages"]:
         console.print(f"[red]{data['unreadable_pages']} unreadable pages[/red]")
+    gl = data["glossary"]
+    if gl["active"] or gl["problems"]:
+        problems = f", {gl['problems']} problems (see lint)" if gl["problems"] else ""
+        console.print(f"glossary: {gl['terms']} terms{problems}")
     if data["git_head"] is None:
         console.print("git: not a repository")
     else:

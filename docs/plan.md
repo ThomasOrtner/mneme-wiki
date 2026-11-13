@@ -25,10 +25,10 @@ How agents use this file: [AGENTS.md § 7](../AGENTS.md#7-workflow).
 | Phase | Goal | Issues | Priority |
 |---|---|---|---|
 | 0 | Docs that explain what the pipeline does | PR #18 | – |
-| 1 | Stop wrong merges and invented content at the source | #15, #13, #22, #25 | p1 |
-| 2 | Vault-specific knowledge | #24, #27, #14, #16 | p2 |
-| 3 | Keep pages up to date, see the vault | #20, #23, #19, #17 | p3 |
-| 4 | Repair what is already in a vault | #6, #3 | p4 |
+| 1 | Stop wrong merges and invented content at the source | #15, #13, #22, #25 | done |
+| 2 | Vault-specific knowledge | #24, #27, #14, #16 | p1 |
+| 3 | Keep pages up to date, see the vault | #20, #23, #19, #17 | p2 |
+| 4 | Repair what is already in a vault | #6, #3 | p3 |
 | Later | Independent infrastructure | #5, #10, #7, #9, #4, #2 | p4 |
 
 ## Phase 0: docs
@@ -64,7 +64,7 @@ the current baseline.
 Phase 1 stops wrong merges; this phase lets a vault tell the pipeline what it already
 knows, so that names which mean one thing end up on one page.
 
-- [ ] **#24** glossary: a curated list of abbreviations and full names that code reads
+- [x] **#24** glossary: a curated list of abbreviations and full names that code reads
       (resolve exact match, aliases, the abbreviation check, the preferred form in
       links). It is the structured part of #14, taken out because it is deterministic,
       needs no prompt rules and helps most in acronym-heavy vaults. It goes first: #14

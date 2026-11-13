@@ -24,7 +24,7 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from . import config, edits, expansions, links, packet
+from . import config, edits, expansions, glossary, links, packet
 from . import frontmatter as fm
 from .index_log import append_log, reindex
 from .lint import lint
@@ -220,8 +220,12 @@ def integrate(
 
     # -- extract + merge ---------------------------------------------------------------
     known = known_pages(ws)
+    gl = glossary.load(ws)  # empty without glossary.md: every stage behaves as before
     log(f"extract: {len(chunks)} calls, vault has {len(known)} entity/concept pages")
-    subjects = extract_stage.extract(llm, pkt, chunks, known, log=log, counters=counters)
+    subjects = extract_stage.extract(
+        llm, pkt, chunks, known, log=log, counters=counters, glossary=gl
+    )
+    glossary.canonicalise(subjects, gl, counters)
     groups = extract_stage.merge_within_source(subjects)
     report.subjects, report.merged = len(subjects), len(groups)
     artifact("extract.json", [g.to_dict() for g in groups])
@@ -252,7 +256,8 @@ def integrate(
         return stop("resolve", [r.to_dict() for r in resolved])
 
     # -- names: new titles and aliases must be in the source (#25) ------------------------
-    evidence = names_stage.Evidence(pkt.text, known, pkt.title)
+    curated = [n for t in gl.terms for n in t.names()]
+    evidence = names_stage.Evidence(pkt.text, known, pkt.title, curated)
     resolved, changes = names_stage.check(resolved, known, evidence, log=log, counters=counters)
     report.skipped = [c.subject for c in changes if c.change == "subject_skipped"]
     artifact("names.json", [c.to_dict() for c in changes])
@@ -260,7 +265,7 @@ def integrate(
         log(f"names: {len(changes)} unbacked names fixed, {len(report.skipped)} subjects skipped")
 
     # -- plan ------------------------------------------------------------------------------
-    plans = plan_stage.plan(resolved, ws, owner=pkt.title, counters=counters)
+    plans = plan_stage.plan(resolved, ws, owner=pkt.title, counters=counters, glossary=gl)
     artifact("plan.json", [p.to_dict() for p in plans])
     lap("plan")
     n_new = sum(p.new for p in plans)
@@ -284,7 +289,7 @@ def integrate(
         step = f"patch {n}/{len(plans)} {'+' if entry.new else '~'} {entry.path}"
         res = patch_stage.patch_page(
             llm, ws, entry, plans, known, ctx, source_title=pkt.title, language=language,
-            today=day, step=step, reserved_names=reserved,
+            today=day, step=step, reserved_names=reserved, glossary=gl,
         )  # fmt: skip
         results.append(res)
         _merge_counters(counters, res.counters, "patch_")
@@ -303,9 +308,9 @@ def integrate(
 
     # -- abbreviations, autolink, source page list ------------------------------------------------
     touched = [r.path for r in written]
-    evidence_text = f"{pkt.title}\n{pkt.text}"
+    evidence_text = f"{pkt.title}\n{pkt.text}\n{gl.evidence()}"
     _strip_expansions(ws, vault, [*touched, source_path], evidence_text, counters)
-    added = autolink_stage.autolink(ws, [*touched, source_path])
+    added = autolink_stage.autolink(ws, [*touched, source_path], gl)
     report.autolinks = sum(added.values())
     src_page = ws.read_page(source_path)
     # The page's own title, not the subject name it was matched under.

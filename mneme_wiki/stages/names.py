@@ -66,8 +66,15 @@ class Evidence:
     """The text a name has to appear in, normalised once, plus the names that may stand
     in front of another backed name as its owner ("Project Alpha" + "WP2")."""
 
-    def __init__(self, source_text: str, pages: list[KnownPage], source_title: str = "") -> None:
-        page_names = [n for p in pages for n in p.names()]
+    def __init__(
+        self,
+        source_text: str,
+        pages: list[KnownPage],
+        source_title: str = "",
+        curated: list[str] = (),
+    ) -> None:
+        """`curated`: the vault glossary's names (#24), trusted like page names."""
+        page_names = [*(n for p in pages for n in p.names()), *curated]
         parts = [source_title, source_text, *page_names]
         # "|" can't be part of a normalised name, so a name never spans two parts.
         self._text = " " + " | ".join(norm(p) for p in parts) + " "

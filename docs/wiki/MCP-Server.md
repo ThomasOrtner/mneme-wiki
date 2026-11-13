@@ -32,7 +32,7 @@ claude mcp add mneme-wiki -s user -e WIKI_VAULT_DIR=... -- C:\path\to\mneme-wiki
 
 | Tool | Arguments | Returns |
 |---|---|---|
-| `status` | — | Page counts, last log entries, git state, inbox packets, running jobs |
+| `status` | — | Page counts, glossary terms, last log entries, git state, inbox packets, running jobs |
 | `search` | `query`, `limit` (≤ 50), `type` | BM25 hits with snippets |
 | `read_page` | `page`: a path (`concepts/x`), file name or title/alias | Front matter and body |
 | `lint` | — | The lint report |

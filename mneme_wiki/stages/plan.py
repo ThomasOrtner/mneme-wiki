@@ -4,8 +4,12 @@ from __future__ import annotations
 
 import re
 from dataclasses import asdict, dataclass, field
+from typing import TYPE_CHECKING
 
 from ..vault import CaseCollisionError, Vault, slugify
+
+if TYPE_CHECKING:
+    from ..glossary import Glossary
 from .common import Claim, known_pages, looks_local_id, name_key, unique
 from .resolve import Resolved
 
@@ -33,6 +37,7 @@ def plan(
     *,
     owner: str = "",
     counters: dict[str, int] | None = None,
+    glossary: Glossary | None = None,
 ) -> list[PagePlan]:
     """One PagePlan per page to write, in first-seen order. Subjects without claims
     produce nothing. A new page whose slug is taken by an unrelated page (or differs
@@ -78,8 +83,20 @@ def plan(
         entry.aliases = unique([*entry.aliases, *names], exclude=[entry.title] if new else [])
         entry.claims.extend(s.claims)
     out = list(plans.values())
+    if glossary:
+        _add_glossary_names(out, vault, glossary)
     _qualify_local_ids(out, vault, counters)
     return out
+
+
+def _add_glossary_names(plans: list[PagePlan], vault: Vault, glossary: Glossary) -> None:
+    """#24 D6: a page this run touches gets its glossary row's names as aliases, also
+    when the source used none of them (an existing `ROCC` page gets the full name)."""
+    known = {p.path: p.names() for p in known_pages(vault)}
+    for p in plans:
+        t = glossary.match([p.title, *p.aliases, *known.get(p.path, [])])
+        if t:
+            p.aliases = unique([*p.aliases, *t.names()], exclude=[p.title] if p.new else [])
 
 
 def _qualify_local_ids(plans: list[PagePlan], vault: Vault, counters: dict[str, int]) -> None:
