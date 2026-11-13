@@ -148,7 +148,7 @@ def cmd_integrate(args: argparse.Namespace) -> int:
         for arg in args.packets:
             report = integrate(
                 vault, _packet_dir(arg, vault), inbox=inbox, dry_run=args.dry_run,
-                stop_after=args.stage, log=log,
+                stop_after=args.stage, log=log, project=args.project,
             )  # fmt: skip
             reports.append(report)
             if args.stage:
@@ -341,6 +341,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--stage", choices=STAGES, help="stop after this stage (nothing is written)")
     p.add_argument("--out", help="with --stage: write the stage's output to this JSON file")
+    p.add_argument(
+        "--project",
+        help="the project the packets belong to, for packets without a `project` field; "
+        "their document-local ids (WP2) are expanded to it",
+    )
     vault_cmd("lint", "check links, front matter, citations; exit 1 on errors", cmd_lint)
     vault_cmd("reindex", "regenerate index.md from the pages", cmd_reindex)
     p = vault_cmd("search", "BM25 search over pages", cmd_search)

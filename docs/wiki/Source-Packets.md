@@ -24,9 +24,19 @@ inbox/<packet-name>/
 | `author` | no | `"Jane Doe"` |
 | `published` | no | `"2024"` |
 | `language` | no | `"de"` |
+| `project` | no | `"Project Alpha"` or `{"name": "Project Alpha", "short": "PA"}` |
 
 `origin` identifies the source: `integrate` refuses a packet whose `origin` is already
 in the vault, so a source is never integrated twice.
+
+`project` names the project the source belongs to (one per source). Its bare
+document-local ids are then that project's: code renames a subject `WP2` to
+"Project Alpha WP2" before resolve, so a progress report that only says "WP2" lands on
+the page the project's proposal created, by exact match and without a model call.
+Extract is told the project too. `short` is used for the `PA-WP2` alias; without it,
+the project page's acronym-like alias is used, if it has one. The source page records
+the project in its front matter: a link if the project's page exists, else the name.
+`integrate --project` sets it for packets without the field.
 
 ## Writing source.md
 
@@ -43,7 +53,8 @@ in the vault, so a source is never integrated twice.
   owner into the heading or the first mention, e.g. `# 2. Data Processing` →
   `# Project Alpha WP2: Data Processing`. Extract is asked to do the same, and resolve
   never matches a bare `WP2`-style name to another source's page without a yes/no
-  check, but a qualified source is the most reliable fix.
+  check, but a qualified source is the most reliable fix. For a source that belongs to
+  one project, the `project` field does this for every id.
 
 ## From mneme
 

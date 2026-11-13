@@ -21,6 +21,16 @@ orchestrates; the model only makes small, checkable decisions.
 | 10 | **Autolink** | code | Turns the first plain mention of another page's title or alias into a link. |
 | 11 | **Finish** | code | Source page lists touched pages; `index.md`, `log.md`; lint; git commit; run report. |
 
+## With a project
+
+A packet can declare the project it belongs to (`project` in `source.meta.json`, or
+`integrate --project`). Then extract is told the project, and before merge code renames
+every subject whose name is a bare document-local id (`WP2`, `D3`: 1-4 capitals and a
+number) to "<project> <id>" (`local_id_project_expanded`). Resolve finds the page the
+project's other sources made by exact match, the names check accepts the project's
+name as an owner, and plan uses the project's short name for the `PA-WP2` alias.
+Without a project nothing changes.
+
 ## With a glossary
 
 If the vault has a [`glossary.md`](Vault-Format.md#glossarymd), these stages read it;

@@ -33,6 +33,33 @@ class PacketError(ValueError):
     """The packet is missing files or its metadata is incomplete."""
 
 
+@dataclass(frozen=True)
+class Project:
+    """The project a source belongs to (#27): its document-local ids (`WP2`) are expanded
+    to `<name> <id>`. `short` (e.g. `PA`) is used for the `PA-WP2` alias (#13 D3)."""
+
+    name: str
+    short: str = ""
+
+    def names(self) -> list[str]:
+        return [n for n in (self.name, self.short) if n]
+
+
+def project_of(meta: dict) -> Project | None:
+    """`"project": "Project Alpha"` or `{"name": "Project Alpha", "short": "PA"}` (D1)."""
+    value = meta.get("project")
+    if value is None or value == "":
+        return None
+    if isinstance(value, str):
+        return Project(" ".join(value.split()))
+    if isinstance(value, dict) and isinstance(value.get("name"), str) and value["name"].strip():
+        short = value.get("short")
+        if short is not None and not isinstance(short, str):
+            raise PacketError("project.short must be a string")
+        return Project(" ".join(value["name"].split()), " ".join((short or "").split()))
+    raise PacketError('project must be a name or {"name": ..., "short": ...}')
+
+
 @dataclass
 class Packet:
     name: str
@@ -45,6 +72,10 @@ class Packet:
     @property
     def title(self) -> str:
         return str(self.meta["title"])
+
+    @property
+    def project(self) -> Project | None:
+        return project_of(self.meta)
 
     @property
     def words(self) -> int:
@@ -78,6 +109,10 @@ def load(path: Path | str) -> Packet:
     missing = [k for k in REQUIRED_META if not str(meta.get(k) or "").strip()]
     if missing:
         raise PacketError(f"{root.name}: source.meta.json lacks {', '.join(missing)}")
+    try:
+        project_of(meta)
+    except PacketError as exc:
+        raise PacketError(f"{root.name}: source.meta.json: {exc}") from exc
     text = _read(source).lstrip("﻿")
     if not text.strip():
         raise PacketError(f"{root.name}: source.md is empty")

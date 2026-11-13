@@ -17,7 +17,15 @@ from ..llm import LLM
 from ..packet import Chunk, Packet
 from ..prompts import load_prompt
 from ..search import Doc, SearchIndex
-from .common import ENTITY_KINDS, Claim, KnownPage, Subject, name_key, unique
+from .common import (
+    ENTITY_KINDS,
+    Claim,
+    KnownPage,
+    Subject,
+    looks_local_id,
+    name_key,
+    unique,
+)
 
 if TYPE_CHECKING:
     from ..glossary import Glossary
@@ -54,10 +62,15 @@ SCHEMA = {
 SYSTEM = load_prompt("extract")
 
 
-def user_prompt(packet: Packet, chunk: Chunk, known: list[str]) -> str:
+def user_prompt(packet: Packet, chunk: Chunk, known: list[str], project: str = "") -> str:
     listed = "\n".join(f"- {k}" for k in known) or "(none yet)"
+    owner = (
+        f"Project: {project} (the owner of this document's work packages, deliverables and tasks)\n"
+        if project
+        else ""
+    )
     return (
-        f"Document: {packet.title} ({packet.meta.get('source_type')})\n"
+        f"Document: {packet.title} ({packet.meta.get('source_type')})\n{owner}"
         f"Section: {chunk.locator}\n\n"
         f"Known wiki pages:\n{listed}\n\n--- CHUNK ---\n{chunk.text}\n--- END ---"
     )
@@ -149,6 +162,7 @@ def extract(
     log: Callable[[str], None] = lambda _m: None,
     counters: dict[str, int] | None = None,
     glossary: Glossary | None = None,
+    project: str = "",
 ) -> list[Subject]:
     client = llm.for_role("extract")
     counters = counters if counters is not None else {}
@@ -156,7 +170,8 @@ def extract(
     for chunk in chunks:
         known = known_for_chunk(chunk, pages, subjects, glossary)
         step = f"extract {chunk.index + 1}/{len(chunks)} {chunk.locator}"
-        data = client.json(SYSTEM, user_prompt(packet, chunk, known), SCHEMA, step=step)
+        prompt = user_prompt(packet, chunk, known, project)
+        data = client.json(SYSTEM, prompt, SCHEMA, step=step)
         if data is None:
             counters["extract_chunk_failed"] = counters.get("extract_chunk_failed", 0) + 1
             log(f"    ✗ chunk {chunk.index + 1} failed twice; its subjects are missing")
@@ -165,6 +180,26 @@ def extract(
         counters["extract_items_dropped"] = counters.get("extract_items_dropped", 0) + dropped
         subjects.extend(found)
     return subjects
+
+
+def expand_local_ids(
+    subjects: list[Subject], project: str, counters: dict[str, int] | None = None
+) -> None:
+    """#27: the source declares its project, so a bare document-local id (`WP2`) is that
+    project's: rename it to "Project Alpha WP2" (the bare id stays as an alias, which
+    plan turns into `PA-WP2` or drops, #13 D3). Resolve then finds the page made from
+    the project's other documents by exact match."""
+    if not project:
+        return
+    for s in subjects:
+        if looks_local_id(s.name):
+            bare = s.name
+            s.name = f"{project} {bare}"
+            s.aliases = unique([bare, *s.aliases], exclude=[s.name])
+            if counters is not None:
+                counters["local_id_project_expanded"] = (
+                    counters.get("local_id_project_expanded", 0) + 1
+                )
 
 
 def merge_within_source(subjects: list[Subject]) -> list[Subject]:

@@ -154,10 +154,12 @@ def query(question: str, file: bool = False) -> dict:
 # integration (background job)
 # ---------------------------------------------------------------------------
 @tool
-def integrate(packet: str, dry_run: bool = False) -> dict:
+def integrate(packet: str, dry_run: bool = False, project: str = "") -> dict:
     """Integrate a source packet (a folder name in the inbox) into the vault, as a
     background job: one git commit per source; dry_run=true only computes the diff.
-    Returns a job_id; poll job_status."""
+    project: the project the packet belongs to, if its source.meta.json has no
+    `project` field (document-local ids like WP2 are expanded to it; a different
+    project than the packet's field is an error). Returns a job_id; poll job_status."""
     from .packet import load
 
     v = vault()
@@ -165,13 +167,16 @@ def integrate(packet: str, dry_run: bool = False) -> dict:
     folder = (inbox / packet).resolve()
     if not folder.is_relative_to(inbox) or folder == inbox:
         raise ValueError("packet must be a folder name inside the inbox")
-    load(folder)  # check the packet now, so a bad one fails here and not in the job
+    pkt = load(folder)  # check the packet now, so a bad one fails here and not in the job
+    declared = pkt.project
+    if project.strip() and declared and declared.name.casefold() != project.strip().casefold():
+        raise ValueError(f"the packet declares project {declared.name!r}; {project!r} differs")
 
     def run(job_log) -> dict:
         from .integrate import integrate as run_integrate
 
         report = run_integrate(v, folder, llm=_llm(job_log), inbox=inbox, dry_run=dry_run,
-                               log=job_log)  # fmt: skip
+                               log=job_log, project=project or None)  # fmt: skip
         data = report.to_dict()
         data.pop("stage_output", None)
         if not dry_run:
