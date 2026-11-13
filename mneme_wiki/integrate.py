@@ -250,8 +250,9 @@ def integrate(
     subjects = extract_stage.extract(
         llm, pkt, chunks, known, log=log, counters=counters, glossary=gl,
     )  # fmt: skip
-    extract_stage.expand_local_ids(subjects, proj.name if proj else "", counters)
+    # The glossary first: a name it knows (`M20` = Mars 2020) is never a local id.
     glossary.canonicalise(subjects, gl, counters)
+    extract_stage.expand_local_ids(subjects, proj.name if proj else "", counters)
     groups = extract_stage.merge_within_source(subjects)
     report.subjects, report.merged = len(subjects), len(groups)
     artifact("extract.json", [g.to_dict() for g in groups])

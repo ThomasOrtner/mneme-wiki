@@ -152,3 +152,25 @@ def test_cli_project_flag_conflict_writes_nothing(vault: Vault, capsys) -> None:
     out = json.loads(capsys.readouterr().out)
     assert code != 0 and "declares local_id_owner" in json.dumps(out)
     assert vault.is_clean() and len(vault.git("log", "--format=%h").stdout.split()) == 1
+
+
+def test_glossary_names_are_never_expanded() -> None:
+    """A global acronym shaped like a local id (`M20`) that the glossary knows keeps its
+    glossary name, even with a local-id owner (the glossary takes precedence)."""
+    from mneme_wiki import glossary
+    from mneme_wiki.stages.common import Claim, Subject
+    from mneme_wiki.stages.extract import expand_local_ids
+
+    g = glossary.parse(
+        "| Term | Full name | Kind | Prefer | Definition |\n|---|---|---|---|---|\n"
+        "| M20 | Mars 2020 | mission | | |\n"
+    )
+    mission = Subject("M20", "entity", "mission", [], "", [Claim("M20 lands.", "x")])
+    wp = Subject("WP2", "entity", "document", [], "", [Claim("WP2 ends.", "x")])
+    glossary.canonicalise([mission, wp], g)
+    expand_local_ids([mission, wp], "Project Alpha")
+    assert mission.name == "Mars 2020" and "M20" in mission.aliases
+    assert wp.name == "Project Alpha WP2"
+    bare = Subject("M20", "entity", "mission", [], "", [Claim("M20 lands.", "x")])
+    expand_local_ids([bare], "Project Alpha")  # without a glossary row: expanded
+    assert bare.name == "Project Alpha M20"

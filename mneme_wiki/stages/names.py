@@ -160,7 +160,7 @@ def check(
             continue
         if s.aliases:
             s.name = s.aliases[0]
-            if project and looks_local_id(s.name):
+            if project and looks_local_id(s.name) and not s.curated:
                 s.name = f"{project} {s.name}"
             s.aliases = unique(s.aliases[1:], exclude=[s.name])
             bump("title_unbacked_replaced")

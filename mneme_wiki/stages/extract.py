@@ -181,11 +181,12 @@ def expand_local_ids(
     """#27: the source declares its project, so a bare document-local id (`WP2`) is that
     project's: rename it to "Project Alpha WP2" (the bare id stays as an alias, which
     plan turns into `PA-WP2` or drops, #13 D3). Resolve then finds the page made from
-    the project's other documents by exact match."""
+    the project's other documents by exact match. A subject the glossary named (it has
+    curated names) is never expanded: the glossary takes precedence."""
     if not project:
         return
     for s in subjects:
-        if looks_local_id(s.name):
+        if looks_local_id(s.name) and not s.curated:
             bare = s.name
             s.name = f"{project} {bare}"
             s.aliases = unique([bare, *s.aliases], exclude=[s.name])
