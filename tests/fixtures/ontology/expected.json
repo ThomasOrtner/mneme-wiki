@@ -1,0 +1,6 @@
+{"findings": [
+  ["ontology-part-of-missing", "entities/rover-b.md", 1],
+  ["ontology-part-of",         "entities/rover-c.md", 1],
+  ["ontology-kind",            "entities/thing.md", 1],
+  ["ontology-format",          "ontology.md", 10]
+]}

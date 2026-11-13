@@ -35,7 +35,8 @@ import yaml
 from .stages.common import ENTITY_KINDS, looks_local_id
 from .vault import ONTOLOGY_FILE, Vault
 
-_BLOCK = re.compile(r"^```ya?ml[ \t]*\n(.*?)^```", re.DOTALL | re.MULTILINE)
+# CRLF too: a vault edited on Windows keeps its line endings (L-6).
+_BLOCK = re.compile(r"^```ya?ml[ \t]*\r?\n(.*?)^```", re.DOTALL | re.MULTILINE)
 _PLACEHOLDER = re.compile(r"\{([a-z])\}")
 _KIND_NAME = re.compile(r"[a-z][a-z0-9_]*")
 
