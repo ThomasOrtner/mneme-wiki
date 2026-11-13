@@ -77,7 +77,7 @@ knows, so that names which mean one thing end up on one page.
       packet-level form of #16's scoped kinds, so #16 can later use it as the owner.
 - [x] **#14** domain rules: a `## Domain rules` section in `WIKI.md` that extract and
       resolve read. Simplest home for the vault-specific local-id patterns of #13.
-- [ ] **#16** ontology, first version = kinds + scoped kinds. Takes over #13 option 2
+- [x] **#16** ontology, first version = kinds + scoped kinds. Takes over #13 option 2
       (`part_of`), #15 fix 2 (the kind guard) and #20's D2 (lint on unknown kinds).
 - [ ] **#33** a source packet declares the local ids the document defines (work packages,
       tasks, deliverables, milestones); code uses that list instead of guessing from the
