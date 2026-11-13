@@ -40,6 +40,7 @@ Work is tracked in GitHub issues; the full rules are in
 | `stages/` | `source`, `extract`, `resolve`, `names`, `plan`, `patch`, `autolink`, `common` |
 | `prompts/*.md` | One system prompt per stage |
 | `edits.py` | Edit model, validation, apply |
+| `ontology.py` | The vault ontology: kinds, `part_of`, scoped kinds and their id patterns (`local_id_test`) |
 | `rules.py` | Domain rules: the `## Domain rules` section of `WIKI.md`, appended to extract and resolve prompts |
 | `glossary.py` | The vault glossary: parse `glossary.md`, look up names, map subjects to terms |
 | `expansions.py` | Remove abbreviation expansions the evidence doesn't back |

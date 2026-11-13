@@ -210,6 +210,9 @@ def cmd_status(args: argparse.Namespace) -> int:
         console.print(f"glossary: {gl['terms']} terms{problems}")
     if data["rules"]["active"]:
         console.print(f"domain rules: {data['rules']['chars']} characters")
+    if data["ontology"]["active"]:
+        o = data["ontology"]
+        console.print(f"ontology: {o['kinds']} kinds, {o['scoped']} scoped")
     if data["git_head"] is None:
         console.print("git: not a repository")
     else:

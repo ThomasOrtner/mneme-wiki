@@ -30,6 +30,19 @@ of every **extract** and **resolve** prompt (after the chunk, after the pair), u
 stay fixed. Code doesn't interpret the rules; they steer the model. The run report records their hash
 (`rules_hash`). Without rules nothing changes.
 
+## With an ontology
+
+If the vault has an [`ontology.md`](Vault-Format.md#ontologymd), extract's
+`entity_kind` choices come from it (as the schema's allowed values, and as a line after
+the chunk listing the kinds), resolve skips the yes/no check for two entities of
+different kinds (`resolve_kind_guard_skipped`; an exact name match across kinds still
+merges and is counted, `resolve_kind_mismatch_exact`), and the scoped kinds' `id`
+patterns decide which names are document-local ids in every stage that cares (resolve's
+guard, the `<owner> <id>` expansion, the names-check fallback, the `PA-WP2` aliases).
+A new page for a scoped id gets that kind and, where it applies, `part_of` the owner
+(`ontology_scoped_kind`). Without an ontology, the built-in kinds and the built-in
+local-id guess stay.
+
 ## With a local-id owner
 
 A packet can declare the project that owns its local ids (`local_id_owner` in

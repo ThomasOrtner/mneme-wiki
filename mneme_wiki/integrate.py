@@ -24,7 +24,7 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from . import config, edits, expansions, glossary, links, packet
+from . import config, edits, expansions, glossary, links, ontology, packet
 from . import frontmatter as fm
 from . import rules as rules_mod
 from .index_log import append_log, reindex
@@ -249,14 +249,17 @@ def integrate(
     known = known_pages(ws)
     gl = glossary.load(ws)  # empty without glossary.md: every stage behaves as before
     rules = rules_mod.load(ws)  # WIKI.md "## Domain rules" (#14); "" = prompts unchanged
+    ont = ontology.load(ws)  # ontology.md (#16); empty = built-in kinds, TD-32 local ids
+    is_local = ontology.local_id_test(ont)
     report.rules_hash = rules_mod.digest(rules)
     log(f"extract: {len(chunks)} calls, vault has {len(known)} entity/concept pages")
     subjects = extract_stage.extract(
         llm, pkt, chunks, known, log=log, counters=counters, glossary=gl, rules=rules,
+        kinds=ont.entity_kinds() if ont else None,
     )  # fmt: skip
     # The glossary first: a name it knows (`M20` = Mars 2020) is never a local id.
     glossary.canonicalise(subjects, gl, counters)
-    extract_stage.expand_local_ids(subjects, proj.name if proj else "", counters)
+    extract_stage.expand_local_ids(subjects, proj.name if proj else "", counters, is_local)
     groups = extract_stage.merge_within_source(subjects)
     report.subjects, report.merged = len(subjects), len(groups)
     artifact("extract.json", [g.to_dict() for g in groups])
@@ -269,7 +272,14 @@ def integrate(
     # -- resolve -------------------------------------------------------------------------
     log("resolve: exact names, then pairwise yes/no per candidate")
     resolved, decisions = resolve_stage.resolve(
-        llm, groups, known, log=log, counters=counters, rules=rules
+        llm,
+        groups,
+        known,
+        log=log,
+        counters=counters,
+        rules=rules,
+        is_local=is_local,
+        kind_guard=bool(ont),
     )
     artifact("resolve_log.jsonl", "\n".join(json.dumps(d.to_dict(), ensure_ascii=False)
                                             for d in decisions))  # fmt: skip
@@ -293,7 +303,7 @@ def integrate(
     evidence = names_stage.Evidence(pkt.text, known, pkt.title, curated)
     resolved, changes = names_stage.check(
         resolved, known, evidence, log=log, counters=counters,
-        project=proj.name if proj else "", source_title=pkt.title,
+        project=proj.name if proj else "", source_title=pkt.title, is_local=is_local,
     )  # fmt: skip
     report.skipped = [c.subject for c in changes if c.change == "subject_skipped"]
     artifact("names.json", [c.to_dict() for c in changes])
@@ -302,7 +312,14 @@ def integrate(
 
     # -- plan ------------------------------------------------------------------------------
     plans = plan_stage.plan(
-        resolved, ws, owner=pkt.title, counters=counters, glossary=gl, project=proj
+        resolved,
+        ws,
+        owner=pkt.title,
+        counters=counters,
+        glossary=gl,
+        project=proj,
+        ontology=ont if ont else None,
+        is_local=is_local,
     )
     artifact("plan.json", [p.to_dict() for p in plans])
     lap("plan")

@@ -14,9 +14,9 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass
 
 from . import frontmatter as fm
-from . import glossary, links, rules, text
+from . import glossary, links, ontology, rules, text
 from .stages.common import name_key
-from .vault import GLOSSARY_FILE, SCHEMA_FILE, Page, Vault
+from .vault import GLOSSARY_FILE, ONTOLOGY_FILE, SCHEMA_FILE, Page, Vault
 
 ERROR, WARNING = "error", "warning"
 CLAIM_MIN_WORDS = 8
@@ -34,6 +34,10 @@ CHECKS = {
     "glossary-conflict": WARNING,
     "glossary-kind": WARNING,
     "rules-too-long": WARNING,
+    "ontology-format": WARNING,
+    "ontology-kind": WARNING,
+    "ontology-part-of": ERROR,
+    "ontology-part-of-missing": WARNING,
     "ambiguous-link": WARNING,
     "missing-heading": WARNING,
     "orphan": WARNING,
@@ -168,12 +172,59 @@ def lint(vault: Vault) -> Report:
 
     _lint_glossary(vault, pages, add)
     _lint_rules(vault, add)
+    _lint_ontology(vault, pages, index, add)
 
     for rel, page in pages.items():
         if page.meta.get("type") in ORPHAN_TYPES and not inbound.get(rel):
             add(rel, 1, "orphan", "no other page links here")
 
     return Report(sorted(findings), len(pages))
+
+
+def _lint_ontology(vault: Vault, pages: dict[str, Page], index: links.LinkIndex, add) -> None:
+    """#16: problems in `ontology.md`; entity kinds that neither the ontology nor the
+    built-in list knows (D4, every vault); `part_of` to the wrong kind (error) or
+    missing where the page's kind declares one (warning)."""
+    ont = ontology.load(vault)
+    for problem in ont.problems if vault.exists(ONTOLOGY_FILE) else ():
+        add(ONTOLOGY_FILE, problem.line, "ontology-format", problem.message)
+    known = ontology.known_kinds(ont)
+    for rel, page in pages.items():
+        if page.meta.get("type") != "entity":
+            continue
+        ek = str(page.meta.get("entity_kind") or "")
+        if ek and ek not in known:
+            where = "the ontology or the built-in kinds" if ont else "the built-in kinds"
+            add(rel, 1, "ontology-kind", f"entity_kind {ek!r} is not in {where}")
+            continue
+        kind = ont.kinds.get(ek) if ont else None
+        if kind is None or not kind.part_of:
+            continue
+        value = page.meta.get("part_of")
+        if not value:
+            add(
+                rel,
+                1,
+                "ontology-part-of-missing",
+                f"a {ek} is part of a {' or '.join(kind.part_of)}; `part_of` is missing",
+            )
+            continue
+        items = value if isinstance(value, list) else [value]
+        for link in (lk for item in items if isinstance(item, str) for lk in links.extract(item)):
+            target = index.resolve(link.target) if link.target else None
+            target_kind = (
+                str(pages[target].meta.get("entity_kind") or "") if target in pages else ""
+            )
+            if target is None:
+                add(rel, 1, "ontology-part-of", f"part_of {link.raw}: no such page")
+            elif target_kind not in kind.part_of:
+                add(
+                    rel,
+                    1,
+                    "ontology-part-of",
+                    f"part_of {link.raw} has kind {target_kind or '(none)'}; "
+                    f"a {ek} is part of: {', '.join(kind.part_of)}",
+                )
 
 
 def _lint_rules(vault: Vault, add) -> None:

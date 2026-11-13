@@ -10,6 +10,7 @@ D:\wikis\
   space-ops\              the vault (a git repo; open it in Obsidian)
     WIKI.md               schema + rules for whoever writes content
     glossary.md           optional: curated abbreviations and names that code reads
+    ontology.md           optional: kinds, part_of/has, scoped kinds and their id patterns
     index.md              generated: every page by type, one line each
     log.md                append-only operation log
     sources\  entities\  concepts\  syntheses\  attachments\
@@ -200,6 +201,61 @@ What it changes:
 
 Change it deliberately, commit it, and log it as a `schema` entry in `log.md`. Without
 `glossary.md` nothing changes.
+
+## ontology.md
+
+An optional vault ontology (#16): which kinds of things the vault has, what is part of
+what, and which ids are only unique inside their owner. One ```` ```yaml ```` block in
+`ontology.md` in the vault root; like `glossary.md` it is a vault file, not a page.
+
+```yaml
+kinds:
+  mission:      {part_of: programme}
+  rover:        {part_of: mission, has: [instrument]}
+  instrument:   {part_of: [rover, mission]}
+  project:      {has: [work_package, deliverable, milestone]}
+  work_package: {part_of: project, scoped: true, id: "WP{n}"}
+  task:         {part_of: work_package, scoped: true, id: "T{n}.{m}"}
+  deliverable:  {part_of: project, scoped: true, id: "D{n}"}
+  milestone:    {part_of: project, scoped: true, id: "MS{n}"}
+```
+
+| Key | Meaning |
+|---|---|
+| kind name | lower_snake_case; becomes an `entity_kind` |
+| `part_of` | the kind(s) a page of this kind belongs to |
+| `has` | the kinds it contains (documentation for now) |
+| `scoped: true` | only unique inside its owner (a work package of one project) |
+| `id` | for scoped kinds: the id pattern. `{n}` is a number; `WP{n}` also matches "WP 2" and "WP-2" |
+
+What it changes (first version):
+
+- **Kinds.** Extract chooses `entity_kind` from these kinds (plus `other`) instead of the
+  built-in list; the list is also shown after the chunk (without it, `qwen3:14b` labelled a
+  rover an instrument). Resolve never asks the model whether two entities of different kinds
+  are the same; an exact name match still merges (names are trusted).
+- **Local ids.** The `id` patterns decide which names are document-local ids. They
+  replace the built-in guess (1–4 capitals and a number) everywhere, so a global acronym
+  that matches no pattern (`P20`) stays an ordinary name. Without an ontology the
+  built-in guess stays. The glossary always comes first: a name it knows is never a
+  local id.
+- **Scoped pages.** A new page for a scoped id gets that kind, and `part_of` the source's
+  `local_id_owner` when the kind belongs to a top-level kind (a deliverable of the
+  project; not a task, which belongs to a work package): a link if the owner's page
+  exists, otherwise its name.
+- **Lint:** `ontology-format` (a kind it can't use), `ontology-kind` (an `entity_kind`
+  neither the ontology nor the built-in list knows; checked in every vault),
+  `ontology-part-of` (error: `part_of` to a missing page or a page of the wrong kind),
+  `ontology-part-of-missing` (a page of a kind with `part_of` but none set). Relations
+  are not extracted yet, so expect that warning on pages like missions and rovers until
+  you add `part_of` by hand.
+- `status` reports the number of kinds and scoped kinds.
+
+`part_of` is a front-matter field, so Dataview can list the parts of a page:
+
+```dataview
+TABLE entity_kind FROM "entities" WHERE contains(string(part_of), this.file.name)
+```
 
 ## Editing by hand
 

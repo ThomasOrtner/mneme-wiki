@@ -114,6 +114,7 @@ def check(
     counters: dict[str, int] | None = None,
     project: str = "",
     source_title: str = "",
+    is_local: Callable[[str], bool] = looks_local_id,
 ) -> tuple[list[Resolved], list[NameChange]]:
     """The resolved subjects with unbacked names fixed, minus those with no backed name.
 
@@ -160,7 +161,7 @@ def check(
             continue
         if s.aliases:
             s.name = s.aliases[0]
-            if project and looks_local_id(s.name) and not s.curated:
+            if project and is_local(s.name) and not s.curated:
                 s.name = f"{project} {s.name}"
             s.aliases = unique(s.aliases[1:], exclude=[s.name])
             bump("title_unbacked_replaced")

@@ -99,6 +99,8 @@ def new_meta(entry: PagePlan, today: dt.date) -> dict:
     }
     if entry.kind == "entity":
         meta["entity_kind"] = entry.entity_kind
+    if entry.part_of:  # #16: a scoped id's owner
+        meta["part_of"] = entry.part_of
     return meta
 
 
@@ -246,6 +248,8 @@ def _finish_meta(
         meta["aliases"] = aliases
     for alias in aliases:
         reserved_names.setdefault(name_key(alias), page.path)
+    if entry.part_of and not meta.get("part_of"):  # #16: never overwrite a value
+        meta["part_of"] = entry.part_of
     if citation not in sources:
         meta["sources"] = [*sources, citation]
     meta["updated"] = today

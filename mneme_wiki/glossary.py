@@ -29,7 +29,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from . import links
+from . import links, ontology
 from .stages.common import ENTITY_KINDS, Subject, name_key, unique
 from .vault import GLOSSARY_FILE, Vault
 
@@ -147,13 +147,16 @@ def canonicalise(
 
 
 def load(vault: Vault) -> Glossary:
-    """The vault's glossary; empty if there is no `glossary.md`."""
+    """The vault's glossary; empty if there is no `glossary.md`. With an ontology (#16),
+    a row's `Kind` must be one of the ontology's kinds."""
     if not vault.exists(GLOSSARY_FILE):
         return Glossary()
-    return parse(vault.read_text(GLOSSARY_FILE))
+    ont = ontology.load(vault)
+    kinds = tuple(ont.entity_kinds()) if ont else ENTITY_KINDS
+    return parse(vault.read_text(GLOSSARY_FILE), kinds)
 
 
-def parse(markdown: str) -> Glossary:
+def parse(markdown: str, kinds: tuple[str, ...] = ENTITY_KINDS) -> Glossary:
     """Rows of every table whose header has the fixed columns (D2). Rows that can't be
     used are reported as problems, never raised."""
     g = Glossary()
@@ -182,11 +185,13 @@ def parse(markdown: str) -> Glossary:
             g.report(n, f"row has {len(cells)} cells, the header {len(cols)}")
             continue
         row = {c: _plain(cells[i]) for i, c in enumerate(cols)}
-        _add_row(g, row, n)
+        _add_row(g, row, n, kinds)
     return g
 
 
-def _add_row(g: Glossary, row: dict[str, str], n: int) -> None:
+def _add_row(
+    g: Glossary, row: dict[str, str], n: int, kinds: tuple[str, ...] = ENTITY_KINDS
+) -> None:
     term, full = row.get("term", ""), row.get("full name", "")
     if not term and not full:
         g.report(n, "row has neither term nor full name")
@@ -197,11 +202,11 @@ def _add_row(g: Glossary, row: dict[str, str], n: int) -> None:
         kind = "concept"
     elif kind_raw == "entity":
         kind, entity_kind = "entity", "other"
-    elif kind_raw in ENTITY_KINDS:
+    elif kind_raw in kinds:
         kind, entity_kind = "entity", kind_raw
     elif kind_raw:
-        kinds = ", ".join(ENTITY_KINDS)
-        g.report(n, f"unknown kind {kind_raw!r} (ignored); use concept, entity or one of {kinds}")
+        listed = ", ".join(kinds)
+        g.report(n, f"unknown kind {kind_raw!r} (ignored); use concept, entity or one of {listed}")
     prefer = row.get("prefer", "").casefold()
     if prefer not in PREFER:
         g.report(n, f"unknown prefer {prefer!r} (ignored); use short or full")
