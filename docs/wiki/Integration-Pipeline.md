@@ -21,15 +21,15 @@ orchestrates; the model only makes small, checkable decisions.
 | 10 | **Autolink** | code | Turns the first plain mention of another page's title or alias into a link. |
 | 11 | **Finish** | code | Source page lists touched pages; `index.md`, `log.md`; lint; git commit; run report. |
 
-## With a project
+## With a local-id owner
 
-A packet can declare the project it belongs to (`project` in `source.meta.json`, or
-`integrate --project`). Then extract is told the project, and before merge code renames
+A packet can declare the project that owns its local ids (`local_id_owner` in
+`source.meta.json`, or `integrate --local-id-owner`). Then, before merge, code renames
 every subject whose name is a bare document-local id (`WP2`, `D3`: 1-4 capitals and a
 number) to "<project> <id>" (`local_id_project_expanded`). Resolve finds the page the
 project's other sources made by exact match, the names check accepts the project's
 name as an owner, and plan uses the project's short name for the `PA-WP2` alias. If the names check has to fall back from an unbacked title to a bare local id ("Project Alpha Deliverable D2" where the text says "D2"), the title becomes "Project Alpha D2".
-Without a project nothing changes.
+The model is not told the owner. Without one nothing changes.
 
 ## With a glossary
 

@@ -37,7 +37,7 @@ claude mcp add mneme-wiki -s user -e WIKI_VAULT_DIR=... -- C:\path\to\mneme-wiki
 | `read_page` | `page`: a path (`concepts/x`), file name or title/alias | Front matter and body |
 | `lint` | — | The lint report |
 | `query` | `question`, `file` | Answer, cited pages, warnings; with `file=true` saved as a synthesis page |
-| `integrate` | `packet` (a folder name in the inbox), `dry_run`, `project` (for a packet without the field) | A `job_id`, at once |
+| `integrate` | `packet` (a folder name in the inbox), `dry_run`, `local_id_owner` (for a packet without the field) | A `job_id`, at once |
 | `job_status` | `job_id` | `queued` / `running` / `done` / `failed`, progress, recent log lines, the run report or error |
 
 `integrate` takes minutes, so it runs as a **background job**, one at a time; poll

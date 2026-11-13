@@ -45,9 +45,14 @@ class Project:
         return [n for n in (self.name, self.short) if n]
 
 
+OWNER_KEY = "local_id_owner"
+
+
 def project_of(meta: dict) -> Project | None:
-    """`"project": "Project Alpha"` or `{"name": "Project Alpha", "short": "PA"}` (D1)."""
-    value = meta.get("project")
+    """`"local_id_owner": "Project Alpha"` or `{"name": "Project Alpha", "short": "PA"}`
+    (#27 D1). Its own key: mneme already exports `project` as a collection label, and
+    reading that expanded every id-shaped name of every mneme packet (bench, 2026-11-13)."""
+    value = meta.get(OWNER_KEY)
     if value is None or value == "":
         return None
     if isinstance(value, str):
@@ -55,9 +60,9 @@ def project_of(meta: dict) -> Project | None:
     if isinstance(value, dict) and isinstance(value.get("name"), str) and value["name"].strip():
         short = value.get("short")
         if short is not None and not isinstance(short, str):
-            raise PacketError("project.short must be a string")
+            raise PacketError(f"{OWNER_KEY}.short must be a string")
         return Project(" ".join(value["name"].split()), " ".join((short or "").split()))
-    raise PacketError('project must be a name or {"name": ..., "short": ...}')
+    raise PacketError(f'{OWNER_KEY} must be a name or {{"name": ..., "short": ...}}')
 
 
 @dataclass

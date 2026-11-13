@@ -60,12 +60,12 @@ def run(vault: Vault, packet: Path, **kwargs):
 
 
 def without_project(tmp_path: Path) -> Path:
-    """`progress-report-1` without its `project` field."""
+    """`progress-report-1` without its `local_id_owner` field."""
     dest = tmp_path / "progress-report-1"
     shutil.copytree(PACKETS / "progress-report-1", dest)
     meta_file = dest / "source.meta.json"
     meta = json.loads(meta_file.read_text(encoding="utf-8"))
-    del meta["project"]
+    del meta["local_id_owner"]
     meta_file.write_text(json.dumps(meta), encoding="utf-8")
     return dest
 
@@ -77,14 +77,15 @@ def resolve_log(vault: Vault, report) -> list[dict]:
 
 # -- the packet field -------------------------------------------------------------------
 def test_project_field_takes_both_forms() -> None:
-    assert project_of({}) is None and project_of({"project": ""}) is None
-    assert project_of({"project": " Project  Alpha "}) == Project("Project Alpha")
-    assert project_of({"project": {"name": "Project Alpha", "short": "PA"}}) == Project(
+    assert project_of({}) is None and project_of({"local_id_owner": ""}) is None
+    assert project_of({"project": "RFM-GIS"}) is None  # mneme's collection label: ignored
+    assert project_of({"local_id_owner": " Project  Alpha "}) == Project("Project Alpha")
+    assert project_of({"local_id_owner": {"name": "Project Alpha", "short": "PA"}}) == Project(
         "Project Alpha", "PA"
     )
     for bad in (3, ["Project Alpha"], {"short": "PA"}, {"name": "X", "short": 1}):
         with pytest.raises(PacketError):
-            project_of({"project": bad})
+            project_of({"local_id_owner": bad})
     assert load(PACKETS / "progress-report-1").project == Project("Project Alpha")
 
 
@@ -103,7 +104,7 @@ def test_bare_ids_go_to_the_projects_pages_by_exact_match(vault: Vault) -> None:
     assert "month 17" in vault.read_text("entities/project-alpha-wp2.md")
     assert report.counters["local_id_project_expanded"] == 3
     extract_prompt = next(r["user"] for r in backend.requests if r["role"] == "extract")
-    assert "Project: Project Alpha" in extract_prompt
+    assert "Project: " not in extract_prompt  # code expands; the model is not told
     assert lint(vault).ok
 
 
@@ -140,14 +141,14 @@ def test_project_flag_sets_and_conflicts(vault: Vault, tmp_path: Path) -> None:
     report, _ = run(vault, without_project(tmp_path), project="Project Alpha")
     assert report.created == [] and "entities/project-alpha-wp2.md" in report.updated
     head = vault.git("rev-parse", "HEAD").stdout
-    with pytest.raises(IntegrateError, match="declares project"):
+    with pytest.raises(IntegrateError, match="declares local_id_owner"):
         run(vault, PACKETS / "progress-report-1", project="Project Beta")
     assert vault.git("rev-parse", "HEAD").stdout == head and vault.is_clean()
 
 
 def test_cli_project_flag_conflict_writes_nothing(vault: Vault, capsys) -> None:
     code = cli.main(["integrate", str(PACKETS / "progress-report-1"), "--vault",
-                     str(vault.root), "--project", "Project Beta", "--json"])  # fmt: skip
+                     str(vault.root), "--local-id-owner", "Project Beta", "--json"])  # fmt: skip
     out = json.loads(capsys.readouterr().out)
-    assert code != 0 and "declares project" in json.dumps(out)
+    assert code != 0 and "declares local_id_owner" in json.dumps(out)
     assert vault.is_clean() and len(vault.git("log", "--format=%h").stdout.split()) == 1

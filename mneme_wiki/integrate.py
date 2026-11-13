@@ -139,14 +139,16 @@ def _strip_expansions(
 
 
 def _project(pkt: packet.Packet, override: str | None) -> packet.Project | None:
-    """The source's project: the packet field, or `--project` for a packet without one.
+    """The owner of the source's local ids: the packet's `local_id_owner`, or
+    `--local-id-owner` for a packet without one.
     A packet field and a different `--project` is an error (#27 D5), before any write."""
     declared = pkt.project
     if not override or not override.strip():
         return declared
     if declared and name_key(declared.name) != name_key(override):
         raise IntegrateError(
-            f"{pkt.name} declares project {declared.name!r}; --project {override!r} differs"
+            f"{pkt.name} declares local_id_owner {declared.name!r}; "
+            f"--local-id-owner {override!r} differs"
         )
     return declared or packet.Project(" ".join(override.split()))
 
@@ -247,7 +249,6 @@ def integrate(
     log(f"extract: {len(chunks)} calls, vault has {len(known)} entity/concept pages")
     subjects = extract_stage.extract(
         llm, pkt, chunks, known, log=log, counters=counters, glossary=gl,
-        project=proj.name if proj else "",
     )  # fmt: skip
     extract_stage.expand_local_ids(subjects, proj.name if proj else "", counters)
     glossary.canonicalise(subjects, gl, counters)

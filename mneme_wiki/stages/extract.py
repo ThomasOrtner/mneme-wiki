@@ -62,15 +62,10 @@ SCHEMA = {
 SYSTEM = load_prompt("extract")
 
 
-def user_prompt(packet: Packet, chunk: Chunk, known: list[str], project: str = "") -> str:
+def user_prompt(packet: Packet, chunk: Chunk, known: list[str]) -> str:
     listed = "\n".join(f"- {k}" for k in known) or "(none yet)"
-    owner = (
-        f"Project: {project} (the owner of this document's work packages, deliverables and tasks)\n"
-        if project
-        else ""
-    )
     return (
-        f"Document: {packet.title} ({packet.meta.get('source_type')})\n{owner}"
+        f"Document: {packet.title} ({packet.meta.get('source_type')})\n"
         f"Section: {chunk.locator}\n\n"
         f"Known wiki pages:\n{listed}\n\n--- CHUNK ---\n{chunk.text}\n--- END ---"
     )
@@ -162,7 +157,6 @@ def extract(
     log: Callable[[str], None] = lambda _m: None,
     counters: dict[str, int] | None = None,
     glossary: Glossary | None = None,
-    project: str = "",
 ) -> list[Subject]:
     client = llm.for_role("extract")
     counters = counters if counters is not None else {}
@@ -170,8 +164,7 @@ def extract(
     for chunk in chunks:
         known = known_for_chunk(chunk, pages, subjects, glossary)
         step = f"extract {chunk.index + 1}/{len(chunks)} {chunk.locator}"
-        prompt = user_prompt(packet, chunk, known, project)
-        data = client.json(SYSTEM, prompt, SCHEMA, step=step)
+        data = client.json(SYSTEM, user_prompt(packet, chunk, known), SCHEMA, step=step)
         if data is None:
             counters["extract_chunk_failed"] = counters.get("extract_chunk_failed", 0) + 1
             log(f"    ✗ chunk {chunk.index + 1} failed twice; its subjects are missing")
