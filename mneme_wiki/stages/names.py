@@ -33,7 +33,7 @@ import unicodedata
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 
-from .common import KnownPage, unique
+from .common import KnownPage, looks_local_id, name_key, unique
 from .resolve import Resolved
 
 _WORD = re.compile(r"[^\W_]+")
@@ -112,8 +112,15 @@ def check(
     *,
     log: Callable[[str], None] = lambda _m: None,
     counters: dict[str, int] | None = None,
+    project: str = "",
+    source_title: str = "",
 ) -> tuple[list[Resolved], list[NameChange]]:
-    """The resolved subjects with unbacked names fixed, minus those with no backed name."""
+    """The resolved subjects with unbacked names fixed, minus those with no backed name.
+
+    `project` (#27): a fallback title that is a bare local id becomes "<project> <id>"
+    ("Project Alpha Deliverable D2" → "Project Alpha D2", not "D2"). A new subject named
+    like the source itself (`source_title`) is skipped: the source page is that page,
+    and a second page with its title is a `duplicate-name` that rejects the whole run."""
     counters = counters if counters is not None else {}
     titles = {p.path: p.title for p in pages}
     changes: list[NameChange] = []
@@ -128,6 +135,11 @@ def check(
     for r in resolved:
         s = r.subject
         original = s.name
+        if source_title and not r.target and name_key(s.name) == name_key(source_title):
+            bump("subject_is_source_skipped")
+            changes.append(NameChange(original, "subject_skipped", original))
+            log(f"    ✗ '{original}' skipped: it is the source itself (its source page)")
+            continue
         aliases = []
         for alias in s.aliases:
             if evidence.backs(alias):
@@ -148,6 +160,8 @@ def check(
             continue
         if s.aliases:
             s.name = s.aliases[0]
+            if project and looks_local_id(s.name):
+                s.name = f"{project} {s.name}"
             s.aliases = unique(s.aliases[1:], exclude=[s.name])
             bump("title_unbacked_replaced")
             changes.append(NameChange(original, "title_replaced", original, s.name))

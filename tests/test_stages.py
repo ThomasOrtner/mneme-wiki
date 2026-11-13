@@ -364,6 +364,29 @@ def test_names_unbacked_name_of_a_matched_subject_is_not_added_to_the_page() -> 
     assert kept[0].subject.name == "Rover Operations Control Centre"
 
 
+def test_names_fallback_local_id_is_qualified_with_the_project() -> None:
+    """#27: "Deliverable D2" isn't in the text, "D2" is; with a project the page is
+    "Project Alpha D2", so the project's later reports find it by exact match."""
+    ev = names.Evidence("WP2 delivers D2, the mosaic pipeline.", [], "", ["Project Alpha"])
+    r = resolve.Resolved(subj("Project Alpha Deliverable D2", "D2"), None, "new")
+    kept, _ = names.check([r], [], ev, project="Project Alpha")
+    assert kept[0].subject.name == "Project Alpha D2"
+    r = resolve.Resolved(subj("Project Alpha Deliverable D2", "D2"), None, "new")
+    kept, _ = names.check([r], [], ev)  # without a project: as before
+    assert kept[0].subject.name == "D2"
+
+
+def test_names_subject_named_like_the_source_is_skipped() -> None:
+    ev = names.Evidence("The Project Alpha Proposal describes three work packages.", [])
+    doc = resolve.Resolved(subj("Project Alpha Proposal"), None, "new")
+    wp = resolve.Resolved(subj("Work Package"), None, "new")
+    counters: dict[str, int] = {}
+    kept, _ = names.check([doc, wp], [], ev, counters=counters,
+                          source_title="Project Alpha Proposal")  # fmt: skip
+    assert [r.subject.name for r in kept] == ["Work Package"]
+    assert counters["subject_is_source_skipped"] == 1
+
+
 def test_names_subject_without_a_backed_name_is_skipped() -> None:
     ev = names.Evidence("Nothing relevant here.", [])
     r = resolve.Resolved(subj("Data Archive Room", "Data Archive and Retrieval"), None, "new")

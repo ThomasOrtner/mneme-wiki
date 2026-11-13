@@ -283,7 +283,10 @@ def integrate(
     # -- names: new titles and aliases must be in the source (#25) ------------------------
     curated = [n for t in gl.terms for n in t.names()] + (proj.names() if proj else [])
     evidence = names_stage.Evidence(pkt.text, known, pkt.title, curated)
-    resolved, changes = names_stage.check(resolved, known, evidence, log=log, counters=counters)
+    resolved, changes = names_stage.check(
+        resolved, known, evidence, log=log, counters=counters,
+        project=proj.name if proj else "", source_title=pkt.title,
+    )  # fmt: skip
     report.skipped = [c.subject for c in changes if c.change == "subject_skipped"]
     artifact("names.json", [c.to_dict() for c in changes])
     if changes:
