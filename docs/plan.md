@@ -70,8 +70,9 @@ knows, so that names which mean one thing end up on one page.
       needs no prompt rules and helps most in acronym-heavy vaults. It goes first: #14
       and #16 can build on its file and parser. It builds on #15 (curated aliases are
       trusted, model aliases are checked).
-- [x] **#27** a source declares its project (`source.meta.json` `project`, or
-      `integrate --project`); code expands its bare local ids (`WP2`) to that project, so
+- [x] **#27** a source declares the owner of its local ids (`source.meta.json`
+      `local_id_owner`, or `integrate --local-id-owner`; mneme's own `project` is a
+      collection label and isn't read); code expands its bare local ids (`WP2`), so
       a later report finds the proposal's pages by exact match. Small, builds on #13; the
       packet-level form of #16's scoped kinds, so #16 can later use it as the owner.
 - [ ] **#14** domain rules: a `## Domain rules` section in `WIKI.md` that extract and
